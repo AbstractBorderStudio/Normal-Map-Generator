@@ -1,0 +1,19 @@
+cmake_minimum_required(VERSION 3.16)
+project(imgui)
+
+add_library(imgui)
+target_sources(imgui PRIVATE 
+	src/imgui_impl_opengl3.cpp
+	src/imgui_impl_glfw.cpp
+	src/imgui.cpp
+	src/imgui_draw.cpp
+	src/imgui_tables.cpp
+	src/imgui_widgets.cpp
+	src/imgui_demo.cpp
+)
+target_include_directories(imgui PUBLIC include)
+target_link_libraries(imgui
+    PUBLIC        # or PRIVATE, if you don't want transitive linkage
+        glfw      # the GLFW target defined by add_subdirectory(thirdparty/GLFW)
+        glad      # the glad    target defined by add_subdirectory(thirdparty/glad)
+)
