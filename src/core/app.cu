@@ -15,7 +15,11 @@ App::App(int _width, int _height, const char* _title)
 	
 	// Initialize ImGui Docking and Window Flags
 	dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
-	window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+	window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_AlwaysAutoResize;// | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+
+	// Initialize input and output images
+	inputImage = core::Image();
+	outputlImage = core::Image();
 }
 
 App::~App()
@@ -113,11 +117,22 @@ void App::Run()
         // -----
         
         // App interface
-		ImGui::Begin("My First Tool", &isToolActive, window_flags);
-        ImGui::End();
-		ImGui::Begin("My First Tool1", &isToolActive, window_flags);
-        ImGui::End();
-		ImGui::Begin("My First Tool2", &isToolActive, window_flags);
+		ImGui::Begin("App", &isToolActive, window_flags);
+		ImGui::SeparatorText("General");
+		if (ImGui::Button("Load"))
+			core::ImageUtils::TryLoadImage("../resources/source.png", &inputImage);
+		if (ImGui::Button("Clear"))
+			inputImage.Clear();
+		if (ImGui::Button("Save"))
+			core::ImageUtils::SaveImage("../resources/output.png", &inputImage);
+			
+		if (inputImage.IsValid())
+		{
+			ImGui::Text("Image loaded: %dx%d, %d channels", inputImage.width, inputImage.height, inputImage.channels);
+			ImGui::Image(inputImage.textureID, ImVec2(100, 100));
+		}
+
+
         ImGui::End();
         // -----
 

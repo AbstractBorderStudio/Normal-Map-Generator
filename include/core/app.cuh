@@ -31,19 +31,11 @@ class App
 		const char* title;
 		bool running;
 		bool isToolActive;
-
-		// input image reference
-		unsigned char* inputImageData;
-		int inputImageWidth;
-		int inputImageHeight;
-		string inputImagePath;
-		
-		// normal map reference
-		unsigned char* normalImageData;
-		int normalImageWidth;
-		int normalImageHeight;
-		string normalImagePath;
 	public:
+		// input image reference
+		core::Image inputImage;
+		core::Image outputlImage;
+
 		App(int _width = 800, int _height = 600, const char* _title = "CUDA OpenGL ImGui Application");
 		~App();
 

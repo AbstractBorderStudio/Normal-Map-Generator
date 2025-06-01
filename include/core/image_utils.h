@@ -7,6 +7,9 @@
 #include <stb_image.h>
 #include <stb_image_write.h>
 
+#include <glad/glad.h>  
+#include <GLFW/glfw3.h> 
+
 namespace core
 {
 	/**
@@ -14,16 +17,60 @@ namespace core
 	*/
 	struct Image {
 		unsigned char* data;
+		GLuint textureID; 
 		int width;
 		int height;
 		int channels;
-		Image() : data(nullptr), width(0), height(0), channels(0) {}
-		Image(unsigned char* data, int width, int height, int channels)
-			: data(data), width(width), height(height), channels(channels) {}
+
+		Image() : data(nullptr), textureID(0), width(0), height(0), channels(0) {}
+
 		~Image() {
+			Clear();
+		}
+
+		void Init(unsigned char* data, int width, int height, int channels)
+		{
+			this->data = data;
+			this->width = width;
+			this->height = height;
+			this->channels = channels;
+			this->textureID = 0;
+
+			if (!IsValid()) {
+				std::cerr << "Invalid image data provided." << std::endl;
+				Clear();
+			}
+
+			// generate gltexture
+			glGenTextures(1, &textureID);
+			glBindTexture(GL_TEXTURE_2D, this->textureID);
+
+			// Setup filtering parameters for display
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+			// Upload pixels into texture
+			glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, this->width, this->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, this->data);
+		}
+
+		bool IsValid()
+		{
+			return data != nullptr && width > 0 && height > 0 && (channels > 0 && channels <= 4);
+		}
+
+		void Clear()
+		{
 			if (data) {
 				stbi_image_free(data);
 			}
+			if (textureID != 0) {
+				glDeleteTextures(1, &textureID);
+			}
+			data = nullptr;
+			width = 0;
+			height = 0;
+			channels = 0;
 		}
 	};
 
@@ -32,8 +79,8 @@ namespace core
 	 */
 	class ImageUtils {
 		public:
-			static unsigned char* load_image(const std::string& filename, int* width, int* height, int* channels);
-			static int save_image(const std::string& filename, const unsigned char* data, int width, int height, int channels);
+			static bool TryLoadImage(const std::string& filename, Image *image);
+			static int SaveImage(const std::string& filename, Image *image);
 	};
 }
 
