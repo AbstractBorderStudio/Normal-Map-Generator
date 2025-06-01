@@ -15,6 +15,11 @@ int main()
         fprintf(stderr, "Failed to initialize the application.\n");
         return -1;
     }
+    else
+    {
+        printf("Application initialized successfully.\n");
+    }
+    
     app.Run();
     return 0;
 }

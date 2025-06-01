@@ -40,6 +40,10 @@ bool App::Init()
 		glfwTerminate();
 		return false;
 	}
+	else
+	{
+		std::cout << "GLFW initialized successfully" << std::endl;
+	}
 	
 	glfwMakeContextCurrent(window);
 	glfwSetFramebufferSizeCallback(window, App::Framebuffer_size_callback);
@@ -50,13 +54,30 @@ bool App::Init()
 		std::cout << "Failed to initialize GLAD" << std::endl;
 		return false;
 	}
+	else
+	{
+		std::cout << "GLAD initialized successfully" << std::endl;
+	}
+
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
+	ImGuiContext *imGuiContext = ImGui::CreateContext();
 	io = &ImGui::GetIO();
 	io->ConfigFlags |= ImGuiConfigFlags_DockingEnable; 		// Enable Docking
 	io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;   // Enable Keyboard Controls
 	io->ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;    // Enable Gamepad Controls
+
+	if (imGuiContext == nullptr)
+	{
+		std::cout << "Failed to create ImGui context" << std::endl;
+		glfwTerminate();
+		return false;
+	}
+	else
+	{
+		std::cout << "ImGui context created successfully" << std::endl;
+	}
+
 	// Setup Platform/Renderer backends
 	ImGui_ImplGlfw_InitForOpenGL(window, true);          	// Second param install_callback=true will install GLFW callbacks and chain to existing ones.
 	ImGui_ImplOpenGL3_Init();
