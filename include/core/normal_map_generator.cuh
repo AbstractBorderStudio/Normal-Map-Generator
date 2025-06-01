@@ -7,4 +7,7 @@
 #include <device_launch_parameters.h>
 #endif
 
+// include math library
+#include <linmath.h>
+
 #endif

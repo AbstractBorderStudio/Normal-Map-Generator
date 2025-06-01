@@ -13,7 +13,7 @@ target_sources(imgui PRIVATE
 )
 target_include_directories(imgui PUBLIC include)
 target_link_libraries(imgui
-    PUBLIC        # or PRIVATE, if you don't want transitive linkage
-        glfw      # the GLFW target defined by add_subdirectory(thirdparty/GLFW)
-        glad      # the glad    target defined by add_subdirectory(thirdparty/glad)
+    PUBLIC        
+        glfw      # the GLFW target
+        glad      # the glad target
 )

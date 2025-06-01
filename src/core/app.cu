@@ -6,11 +6,16 @@ App::App(int _width, int _height, const char* _title)
 	width = _width;
 	height = _height;
 	title = _title;
+
+	// Initialize member variables
 	window = nullptr;
-	dockspace_flags = 0;
 	running = false;
 	isToolActive = false;
 	io = nullptr;
+	
+	// Initialize ImGui Docking and Window Flags
+	dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
+	window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
 }
 
 App::~App()
@@ -83,8 +88,6 @@ bool App::Init()
 	ImGui_ImplOpenGL3_Init();
 
 	// Variables
-	isToolActive = true;
-	dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
 	return true;
 }
 
@@ -110,12 +113,16 @@ void App::Run()
         // -----
         
         // App interface
-		ImGui::Begin("My First Tool", &isToolActive, ImGuiWindowFlags_MenuBar);
+		ImGui::Begin("My First Tool", &isToolActive, window_flags);
+        ImGui::End();
+		ImGui::Begin("My First Tool1", &isToolActive, window_flags);
+        ImGui::End();
+		ImGui::Begin("My First Tool2", &isToolActive, window_flags);
         ImGui::End();
         // -----
 
 		// opengl render
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         // ------
 

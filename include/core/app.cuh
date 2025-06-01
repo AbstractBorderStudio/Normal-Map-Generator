@@ -2,17 +2,11 @@
 #define MAIN_H
 
 // Include STANDARD LIBRARIES
-using namespace std; 
+using namespace std;
 #include <iostream>
 
-// INCLUDE CUDA LIBRARY
-#ifdef __CUDACC__
-#include <cuda_runtime.h>
-#include <device_launch_parameters.h>
-#endif
-
-// INCLUDE MATH LIBRARY
-#include <linmath.h>
+// Include image utilities
+#include <image_utils.h>
 
 // Include OPENGL BACKEND
 #include <glad/glad.h>
@@ -23,16 +17,32 @@ using namespace std;
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 
+// Include Normal Map Generator
+#include <normal_map_generator.cuh>
+
 class App
 {
 	private:
 		GLFWwindow* window;
 		ImGuiIO* io;
 		ImGuiDockNodeFlags dockspace_flags;
+		ImGuiDockNodeFlags window_flags;
 		int width, height;
 		const char* title;
 		bool running;
 		bool isToolActive;
+
+		// input image reference
+		unsigned char* inputImageData;
+		int inputImageWidth;
+		int inputImageHeight;
+		string inputImagePath;
+		
+		// normal map reference
+		unsigned char* normalImageData;
+		int normalImageWidth;
+		int normalImageHeight;
+		string normalImagePath;
 	public:
 		App(int _width = 800, int _height = 600, const char* _title = "CUDA OpenGL ImGui Application");
 		~App();
