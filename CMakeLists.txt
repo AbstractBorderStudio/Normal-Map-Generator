@@ -14,14 +14,14 @@ set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
 
-add_subdirectory(thirdparty/glfw-3.4)   # window manager
-add_subdirectory(thirdparty/glad)	    # opengl loader
-add_subdirectory(thirdparty/imgui)      # user interface        
+add_subdirectory(include/thirdparty/glfw-3.4)  # window manager
+add_subdirectory(include/thirdparty/glad)	     # opengl loader
+add_subdirectory(include/thirdparty/imgui)     # user interface        
 
 # include header directory
 include_directories(${CMAKE_SOURCE_DIR}/include)
-include_directories(${CMAKE_SOURCE_DIR}/thirdparty/stb)
-include_directories(${CMAKE_SOURCE_DIR}/thirdparty/linmath/include)
+include_directories(${CMAKE_SOURCE_DIR}/include/thirdparty/stb)
+include_directories(${CMAKE_SOURCE_DIR}/include/thirdparty/linmath/include)
 
 # include source files
 file(GLOB_RECURSE SRC_FILES
