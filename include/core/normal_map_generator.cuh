@@ -1,6 +1,4 @@
-#ifndef NORMAL_MAP_GENERATOR_H
-#define NORMAL_MAP_GENERATOR_H
-
+#pragma once
 // INCLUDE CUDA LIBRARY
 #ifdef __CUDACC__
 #include <cuda_runtime.h>
@@ -9,5 +7,3 @@
 
 // include math library
 #include <linmath.h>
-
-#endif

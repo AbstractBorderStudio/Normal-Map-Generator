@@ -7,7 +7,7 @@ const unsigned int SCR_HEIGHT = 600;
 int main()
 {
     
-    App app = App(SCR_WIDTH, SCR_HEIGHT, "Normal Map Generator");
+    core::App app = core::App(SCR_WIDTH, SCR_HEIGHT, "Normal Map Generator");
     
     // Initialize the application
     if (!app.Init())

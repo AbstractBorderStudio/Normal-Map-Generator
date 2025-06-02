@@ -1,34 +1,15 @@
 #include <app.cuh>
 
-App::App(int _width, int _height, const char* _title)
-{
-	// Initialize GLFW and ImGui
-	width = _width;
-	height = _height;
-	title = _title;
+core::App::App(int width, int height, const char* title)
+	: appData(width, height, title), userInterface() {}
 
-	// Initialize member variables
-	window = nullptr;
-	running = false;
-	isToolActive = false;
-	io = nullptr;
-	
-	// Initialize ImGui Docking and Window Flags
-	dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
-	window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_AlwaysAutoResize;// | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-
-	// Initialize input and output images
-	inputImage = core::Image();
-	outputlImage = core::Image();
-}
-
-App::~App()
+core::App::~App()
 {
 	// Cleanup resources
 	cleanup();
 }
 
-bool App::Init()
+bool core::App::Init()
 {
 	// glfw: initialize and configure
 	// ------------------------------
@@ -42,8 +23,8 @@ bool App::Init()
 
 	// glfw window creation
 	// --------------------
-	window = glfwCreateWindow(width, height, "Normal Map Generator", NULL, NULL);
-	if (window == NULL)
+	appData.window = glfwCreateWindow(appData.width, appData.height, "Normal Map Generator", NULL, NULL);
+	if (appData.window == NULL)
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
 		glfwTerminate();
@@ -54,8 +35,8 @@ bool App::Init()
 		std::cout << "GLFW initialized successfully" << std::endl;
 	}
 	
-	glfwMakeContextCurrent(window);
-	glfwSetFramebufferSizeCallback(window, App::Framebuffer_size_callback);
+	glfwMakeContextCurrent(appData.window);
+	glfwSetFramebufferSizeCallback(appData.window, core::App::Framebuffer_size_callback);
 	// glad: load all OpenGL function pointers
 	// ---------------------------------------
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
@@ -69,71 +50,29 @@ bool App::Init()
 	}
 
 	// Setup Dear ImGui context
-	IMGUI_CHECKVERSION();
-	ImGuiContext *imGuiContext = ImGui::CreateContext();
-	io = &ImGui::GetIO();
-	io->ConfigFlags |= ImGuiConfigFlags_DockingEnable; 		// Enable Docking
-	io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;   // Enable Keyboard Controls
-	io->ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;    // Enable Gamepad Controls
-
-	if (imGuiContext == nullptr)
+	// -----------------------------
+	if (!userInterface.TryInit(appData.window))
 	{
-		std::cout << "Failed to create ImGui context" << std::endl;
-		glfwTerminate();
+		std::cout << "Failed to initialize user interface" << std::endl;
 		return false;
 	}
 	else
 	{
-		std::cout << "ImGui context created successfully" << std::endl;
+		std::cout << "user interface initialized successfully" << std::endl;
 	}
-
-	// Setup Platform/Renderer backends
-	ImGui_ImplGlfw_InitForOpenGL(window, true);          	// Second param install_callback=true will install GLFW callbacks and chain to existing ones.
-	ImGui_ImplOpenGL3_Init();
 
 	// Variables
 	return true;
 }
 
-void App::Run()
+void core::App::Run()
 {
 	// render loop
     // -----------
-    while (!glfwWindowShouldClose(window))
+    while (!glfwWindowShouldClose(appData.window))
     {
         // process input
-        ProcessInput(window);
-        // -----
-
-        // Start the Dear ImGui frame
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-        // -----
-		
-		// DockSpacev
-        if (io->ConfigFlags & ImGuiConfigFlags_DockingEnable)
-            ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), dockspace_flags);
-        // -----
-        
-        // App interface
-		ImGui::Begin("App", &isToolActive, window_flags);
-		ImGui::SeparatorText("General");
-		if (ImGui::Button("Load"))
-			core::ImageUtils::TryLoadImage("../resources/source.png", &inputImage);
-		if (ImGui::Button("Clear"))
-			inputImage.Clear();
-		if (ImGui::Button("Save"))
-			core::ImageUtils::SaveImage("../resources/output.png", &inputImage);
-			
-		if (inputImage.IsValid())
-		{
-			ImGui::Text("Image loaded: %dx%d, %d channels", inputImage.width, inputImage.height, inputImage.channels);
-			ImGui::Image(inputImage.textureID, ImVec2(100, 100));
-		}
-
-
-        ImGui::End();
+        ProcessInput(appData.window);
         // -----
 
 		// opengl render
@@ -141,24 +80,20 @@ void App::Run()
         glClear(GL_COLOR_BUFFER_BIT);
         // ------
 
-		// imgui rendering
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+		userInterface.Render(&appData);
         // ------
 
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-        glfwSwapBuffers(window);
+        glfwSwapBuffers(appData.window);
         glfwPollEvents();
         // ------
     }
 }
 
-void App::cleanup()
+void core::App::cleanup()
 {
-	// terminate imgui
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
+	// Cleanup user interface
+	userInterface.Shutdown();	
 
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
@@ -167,7 +102,7 @@ void App::cleanup()
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
-void App::ProcessInput(GLFWwindow *window)
+void core::App::ProcessInput(GLFWwindow *window)
 {
     if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
@@ -175,7 +110,7 @@ void App::ProcessInput(GLFWwindow *window)
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
 // ---------------------------------------------------------------------------------------------
-void App::Framebuffer_size_callback(GLFWwindow* window, int width, int height)
+void core::App::Framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
 	// make sure the viewport matches the new window dimensions; note that width and 
 	// height will be significantly larger than specified on retina displays.

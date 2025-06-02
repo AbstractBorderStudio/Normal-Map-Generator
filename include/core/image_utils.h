@@ -1,5 +1,4 @@
-#ifndef IMAGE_UTILS_H
-#define IMAGE_UTILS_H
+#pragma once
 
 #include <iostream>
 #include <string>
@@ -17,7 +16,7 @@ namespace core
 	*/
 	struct Image {
 		unsigned char* data;
-		GLuint textureID; 
+		GLuint textureID;
 		int width;
 		int height;
 		int channels;
@@ -83,5 +82,3 @@ namespace core
 			static int SaveImage(const std::string& filename, Image *image);
 	};
 }
-
-#endif

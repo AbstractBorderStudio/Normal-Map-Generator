@@ -16,7 +16,10 @@ bool core::ImageUtils::TryLoadImage(const std::string& filename, Image *image) {
 
 	// Reset the image structure
 	if (image->IsValid())
+	{
+		std::cerr << "Image is already valid, clearing previous data." << std::endl;
 		image->Clear();
+	}
 
 	// load the image data
 	int width, height, channels;
