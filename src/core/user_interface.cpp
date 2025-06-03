@@ -7,6 +7,7 @@ core::UserInterface::UserInterface()
 	// Initialize ImGui Docking and Window Flags
 	dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
 	window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse;
+	preview_flags = ImGuiWindowFlags_AlwaysAutoResize;// | ImGuiWindowFlags_NoMove;
 }
 
 bool core::UserInterface::TryInit(GLFWwindow *window) 
@@ -51,24 +52,51 @@ void core::UserInterface::Render(AppData *data)
 	ImGui::Begin("App", &isToolActive, window_flags);
 	ImGui::SeparatorText("General");
 	if (ImGui::Button("Load"))
-		core::ImageUtils::TryLoadImage("../resources/source.png", &data->inputImage);
+		ImageUtils::TryLoadImage("../resources/source.png", &data->inputImage);
+	if (ImGui::Button("Process"))
+	{
+		data->normalMapGenerator.GenerateNormalMap(
+			&data->inputImage, 
+			&data->outputImage
+		);
+	}
 	if (ImGui::Button("Clear"))
-		data->inputImage.Clear();
+	{
+		if (data->inputImage.IsValid())
+		{
+			data->inputImage.Clear();
+		}
+		if (data->outputImage.IsValid())
+		{
+			data->outputImage.Clear();
+		}
+	}
 	if (ImGui::Button("Save"))
-		core::ImageUtils::SaveImage("../resources/output.png", &data->inputImage);
+	{
+		if (!data->outputImage.IsValid())
+		{
+			std::cout << "Output image is not valid!" << std::endl;
+			return;
+		}
+		ImageUtils::SaveImage("../resources/output.png", &data->inputImage);
+	}
     ImGui::End();
+	// -----
+
+	// Input preview and Output preview
+	// -----
+	ImGui::Begin("Input Preview", &isToolActive, preview_flags);
 	if (data->inputImage.IsValid())
 	{
-		ImGui::Begin("Input Preview", &isToolActive, window_flags);
-		ImGui::Image(data->inputImage.textureID, ImVec2(200, 200));
-		ImGui::End();
+		ImGui::Image(data->inputImage.textureID, ImVec2(400, 400));
 	}
+	ImGui::End();
+	ImGui::Begin("Output Preview", &isToolActive, preview_flags);
 	if (data->outputImage.IsValid())
 	{
-		ImGui::Begin("Output Preview", &isToolActive, window_flags);
-		ImGui::Image(data->outputImage.textureID, ImVec2(200, 200));
-		ImGui::End();
+		ImGui::Image(data->outputImage.textureID, ImVec2(400, 400));
 	}
+	ImGui::End();
     // -----
 
 	// imgui rendering

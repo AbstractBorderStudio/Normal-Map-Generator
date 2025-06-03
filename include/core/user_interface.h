@@ -20,6 +20,7 @@ namespace core
 			ImGuiIO* io;
 			ImGuiDockNodeFlags dockspace_flags;
 			ImGuiDockNodeFlags window_flags;
+			ImGuiDockNodeFlags preview_flags;
 			bool isToolActive;
 		public:
 			UserInterface();

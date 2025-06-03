@@ -7,6 +7,8 @@
 // Include image utilities
 #include <image_utils.h>
 
+#include <normal_map_generator.cuh>
+
 namespace core
 {
 	struct AppData
@@ -14,12 +16,14 @@ namespace core
 		GLFWwindow* window;
 		int width, height;
 		const char* title;
+		NormalMapGenerator normalMapGenerator;
 
 		// input image reference
 		Image inputImage;
 		Image outputImage;
 
 		AppData(int w, int h, const char* t)
-			: window(nullptr), width(w), height(h), title(t), inputImage(), outputImage() {}
+			: window(nullptr), width(w), height(h), title(t), inputImage(), outputImage(), 
+			  normalMapGenerator() {}
 	};
 }

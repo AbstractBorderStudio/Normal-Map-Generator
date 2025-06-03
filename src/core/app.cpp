@@ -1,4 +1,4 @@
-#include <app.cuh>
+#include <app.h>
 
 core::App::App(int width, int height, const char* title)
 	: appData(width, height, title), userInterface() {}
@@ -58,7 +58,7 @@ bool core::App::Init()
 	}
 	else
 	{
-		std::cout << "user interface initialized successfully" << std::endl;
+		std::cout << "User interface initialized successfully" << std::endl;
 	}
 
 	// Variables

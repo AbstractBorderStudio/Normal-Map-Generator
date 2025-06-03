@@ -2,30 +2,34 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <image_utils.h>
 
-bool core::ImageUtils::TryLoadImage(const std::string& filename, Image *image) {
-	// Check if the filename is valid
-	if (filename.empty()) {
+bool core::ImageUtils::TryLoadImage(const std::string& filePath, Image *image) {
+	// Check if the filePath is valid
+	if (filePath.empty()) {
 		std::cerr << "Filename is empty." << std::endl;
 		return false;
 	}
 
 	if (image == nullptr) {
-		std::cerr << "Image pointer is null." << std::endl;
+		std::cerr << "Initializing image" << std::endl;
 		image = new Image();
 	}
 
-	// Reset the image structure
-	if (image->IsValid())
+	if (!image->IsValid())
 	{
-		std::cerr << "Image is already valid, clearing previous data." << std::endl;
+		std::cerr << "Image is not valid, clearing and reinitializing." << std::endl;
 		image->Clear();
+	}
+
+	if (image->imagePath.compare(filePath) == 0) {
+		std::cout << "Image already initialized with the same path, skipping reinitialization." << std::endl;
+		return false;
 	}
 
 	// load the image data
 	int width, height, channels;
-	unsigned char* data = stbi_load(filename.c_str(), &width, &height, &channels, 0);
+	unsigned char* data = stbi_load(filePath.c_str(), &width, &height, &channels, 0);
 	if (!data) {
-		std::cerr << "Failed to load image: " << filename << " - " << stbi_failure_reason() << std::endl;
+		std::cerr << "Failed to load image: " << filePath << " - " << stbi_failure_reason() << std::endl;
 		return false;
 	}
 	
@@ -37,13 +41,13 @@ bool core::ImageUtils::TryLoadImage(const std::string& filename, Image *image) {
 	}
 	
 	// initialize the image structure
-	image->Init(data, width, height, channels);
+	image->Init(filePath, data, width, height, channels);
 	if (!image->IsValid()) {
-		std::cerr << "Invalid image data after loading." << std::endl;
+		std::cerr << "Invalid image data." << std::endl;
 		image->Clear();
 		return false;
 	}
-	std::cout << "Loaded image from " << filename << " with dimensions " << image->width << "x" << image->height << " and " << image->channels << " channels." << std::endl;
+	std::cout << "Loaded image from " << filePath << " with dimensions " << image->width << "x" << image->height << " and " << image->channels << " channels." << std::endl;
 	return true;
 }
 

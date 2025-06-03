@@ -1,4 +1,4 @@
-#include <app.cuh>
+#include <main.h>
 
 // settings
 const unsigned int SCR_WIDTH = 800;

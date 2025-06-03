@@ -17,6 +17,7 @@ namespace core
 	struct Image {
 		unsigned char* data;
 		GLuint textureID;
+		std::string imagePath;
 		int width;
 		int height;
 		int channels;
@@ -27,18 +28,14 @@ namespace core
 			Clear();
 		}
 
-		void Init(unsigned char* data, int width, int height, int channels)
+		void Init(std::string imagePath, unsigned char* data, int width, int height, int channels)
 		{
+			this->imagePath = imagePath;
 			this->data = data;
 			this->width = width;
 			this->height = height;
 			this->channels = channels;
-			this->textureID = 0;
-
-			if (!IsValid()) {
-				std::cerr << "Invalid image data provided." << std::endl;
-				Clear();
-			}
+			this->textureID = -1;
 
 			// generate gltexture
 			glGenTextures(1, &textureID);
@@ -55,7 +52,28 @@ namespace core
 
 		bool IsValid()
 		{
-			return data != nullptr && width > 0 && height > 0 && (channels > 0 && channels <= 4);
+			if (data == nullptr || width <= 0 || height <= 0 || channels < 0 || channels > 4) {
+				return false;
+			}
+			return true;
+		}
+
+		void UpdateTexture()
+		{
+			if (textureID != 0 && data != nullptr)
+			{
+				glBindTexture(GL_TEXTURE_2D, textureID);
+				glTexSubImage2D(
+					GL_TEXTURE_2D,
+					0, // mipmap level
+					0, 0, // xoffset, yoffset
+					width,
+					height,
+					channels == 4 ? GL_RGBA : GL_RGB, // choose format based on channels
+					GL_UNSIGNED_BYTE,
+					data
+				);
+			}
 		}
 
 		void Clear()
@@ -70,6 +88,7 @@ namespace core
 			width = 0;
 			height = 0;
 			channels = 0;
+			imagePath.clear();
 		}
 	};
 
