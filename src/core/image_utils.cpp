@@ -48,6 +48,7 @@ bool core::ImageUtils::TryLoadImage(const std::string& filePath, Image *image) {
 		return false;
 	}
 	std::cout << "Loaded image from " << filePath << " with dimensions " << image->width << "x" << image->height << " and " << image->channels << " channels." << std::endl;
+	free(data);
 	return true;
 }
 
@@ -60,10 +61,17 @@ int core::ImageUtils::SaveImage(const std::string& filename, Image *image) {
 		std::cerr << "Invalid image dimensions: " << image->width << "x" << image->height << std::endl;
 		return 0;
 	}
-	if (!image->data) {
+	if (image->data.empty() != 0) {
 		std::cerr << "Image data is null." << std::endl;
 		return 0;
 	}
 	std::cout << "Saving image to " << filename << " with dimensions " <<image-> width << "x" << image->height << " and " << image->channels << " channels." << std::endl;
-	return stbi_write_png(filename.c_str(), image->width, image->height, image->channels, image->data, image->width * image->channels);
+	return stbi_write_png(
+		filename.c_str(), 
+		image->width, 
+		image->height, 
+		image->channels, 
+		image->data.data(), 
+		image->width * image->channels
+);
 }

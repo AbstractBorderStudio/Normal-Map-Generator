@@ -6,7 +6,7 @@ core::App::App(int width, int height, const char* title)
 core::App::~App()
 {
 	// Cleanup resources
-	cleanup();
+	Cleanup();
 }
 
 bool core::App::Init()
@@ -90,8 +90,10 @@ void core::App::Run()
     }
 }
 
-void core::App::cleanup()
+void core::App::Cleanup()
 {
+	appData.Cleanup();
+
 	// Cleanup user interface
 	userInterface.Shutdown();	
 

@@ -30,7 +30,7 @@ namespace core
 
 			bool Init();
 			void Run();
-			void cleanup();
+			void Cleanup();
 			static void ProcessInput(GLFWwindow *window);
 			static void Framebuffer_size_callback(GLFWwindow* window, int width, int height);
 	};

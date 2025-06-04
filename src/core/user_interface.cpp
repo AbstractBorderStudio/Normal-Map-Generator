@@ -7,10 +7,12 @@ core::UserInterface::UserInterface()
 	// Initialize ImGui Docking and Window Flags
 	dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
 	window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse;
-	preview_flags = ImGuiWindowFlags_AlwaysAutoResize;// | ImGuiWindowFlags_NoMove;
+	preview_flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
+
+	inputImagePath = "";
 }
 
-bool core::UserInterface::TryInit(GLFWwindow *window) 
+bool core::UserInterface::TryInit(GLFWwindow *window)
 {
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
@@ -51,8 +53,18 @@ void core::UserInterface::Render(AppData *data)
     // App interface
 	ImGui::Begin("App", &isToolActive, window_flags);
 	ImGui::SeparatorText("General");
+	if (ImGui::Button("Open File"))
+	{
+		if (TryOpenFileDialog(inputImagePath))
+		{
+			std::cout << "Selected file: " << inputImagePath << std::endl;
+		}
+	}
+	
+	ImGui::Text("Current Image Path: %s", inputImagePath.c_str());
+
 	if (ImGui::Button("Load"))
-		ImageUtils::TryLoadImage("../resources/source.png", &data->inputImage);
+		ImageUtils::TryLoadImage(inputImagePath, &data->inputImage);
 	if (ImGui::Button("Process"))
 	{
 		data->normalMapGenerator.GenerateNormalMap(
@@ -78,7 +90,7 @@ void core::UserInterface::Render(AppData *data)
 			std::cout << "Output image is not valid!" << std::endl;
 			return;
 		}
-		ImageUtils::SaveImage("../resources/output.png", &data->inputImage);
+		ImageUtils::SaveImage("../resources/output.png", &data->outputImage);
 	}
     ImGui::End();
 	// -----
@@ -86,15 +98,25 @@ void core::UserInterface::Render(AppData *data)
 	// Input preview and Output preview
 	// -----
 	ImGui::Begin("Input Preview", &isToolActive, preview_flags);
+	if (ImGui::IsWindowHovered() && io->MouseWheel != 0.0f)
+		inputZoom += ImGui::GetIO().MouseWheel * 0.1f;
+	inputZoom = std::clamp(inputZoom, 0.1f, 20.0f);
 	if (data->inputImage.IsValid())
 	{
-		ImGui::Image(data->inputImage.textureID, ImVec2(400, 400));
+		auto img_size = ComputeDynamicImageSize(&data->inputImage, inputZoom);
+		ImGui::Image(data->inputImage.textureID, img_size);
 	}
 	ImGui::End();
+
+	// Output Preview
 	ImGui::Begin("Output Preview", &isToolActive, preview_flags);
+		if (ImGui::IsWindowHovered() && io->MouseWheel != 0.0f)
+		outputZoom += ImGui::GetIO().MouseWheel * 0.1f;
+	outputZoom = std::clamp(outputZoom, 0.01f, 20.0f);
 	if (data->outputImage.IsValid())
 	{
-		ImGui::Image(data->outputImage.textureID, ImVec2(400, 400));
+		auto img_size = ComputeDynamicImageSize(&data->outputImage, outputZoom);
+		ImGui::Image(data->outputImage.textureID, img_size);
 	}
 	ImGui::End();
     // -----
@@ -110,4 +132,61 @@ void core::UserInterface::Shutdown()
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
+}
+
+void EscapeWhitespace(std::string& path) {
+	size_t pos = 0;
+	while ((pos = path.find(' ', pos)) != std::string::npos) {
+		path.replace(pos, 1, "\\ ");
+		pos += 2; // Skip past the newly inserted \ and space
+	}
+}
+
+bool core::UserInterface::TryOpenFileDialog(std::string &filePath) 
+{
+	char fileName[MAX_PATH] = "";
+
+    OPENFILENAMEA ofn;
+    ZeroMemory(&ofn, sizeof(ofn));
+
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = nullptr;
+    ofn.lpstrFilter = "PNG Files\0*.png\0";
+    ofn.lpstrFile = fileName;
+    ofn.nMaxFile = MAX_PATH;
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+    ofn.lpstrDefExt = "png";
+
+    if (GetOpenFileNameA(&ofn)) {
+        filePath = fileName;
+
+        // Convert backslashes to forward slashes
+        std::replace(filePath.begin(), filePath.end(), '\\', '/');
+        //EscapeWhitespace(filePath);
+        return true;
+    }
+
+    return false;
+}
+
+ImVec2 core::UserInterface::ComputeDynamicImageSize(Image *image, float zoom)
+{
+	float avail_height = ImGui::GetWindowHeight();
+	float avail_width = ImGui::GetWindowWidth();
+	float aspect = (float)image->width / (float)image->height;
+	ImVec2 img_size = ImVec2(avail_height * aspect * zoom, avail_height * zoom);
+
+	// Clamp image size to window width if needed
+	if (img_size.x > avail_width) {
+		img_size.x = avail_width;
+		img_size.y = avail_width / aspect;
+	}
+
+	// Center image horizontally and vertically
+	float x_offset = (avail_width - img_size.x) * 0.5f;
+	float y_offset = (avail_height - img_size.y) * 0.5f;
+	if (x_offset > 0 || y_offset > 0)
+		ImGui::SetCursorPos(ImVec2(x_offset > 0 ? x_offset : 0, y_offset > 0 ? y_offset : 0));
+	
+	return img_size;
 }

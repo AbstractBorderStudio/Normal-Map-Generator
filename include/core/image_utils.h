@@ -9,20 +9,22 @@
 #include <glad/glad.h>  
 #include <GLFW/glfw3.h> 
 
+#include <vector>
+
 namespace core
 {
 	/**
 	* @brief custom image structure to hold image data
 	*/
 	struct Image {
-		unsigned char* data;
+		std::vector<unsigned char> data;
 		GLuint textureID;
 		std::string imagePath;
 		int width;
 		int height;
 		int channels;
 
-		Image() : data(nullptr), textureID(0), width(0), height(0), channels(0) {}
+		Image() : data(std::vector<unsigned char>()), textureID(0), width(0), height(0), channels(0) {}
 
 		~Image() {
 			Clear();
@@ -31,7 +33,7 @@ namespace core
 		void Init(std::string imagePath, unsigned char* data, int width, int height, int channels)
 		{
 			this->imagePath = imagePath;
-			this->data = data;
+			this->data.assign(data, data + (width * height * channels));
 			this->width = width;
 			this->height = height;
 			this->channels = channels;
@@ -47,12 +49,12 @@ namespace core
 
 			// Upload pixels into texture
 			glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, this->width, this->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, this->data);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, this->width, this->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, this->data.data());
 		}
 
 		bool IsValid()
 		{
-			if (data == nullptr || width <= 0 || height <= 0 || channels < 0 || channels > 4) {
+			if (data.empty() || width <= 0 || height <= 0 || channels < 0 || channels > 4) {
 				return false;
 			}
 			return true;
@@ -60,7 +62,7 @@ namespace core
 
 		void UpdateTexture()
 		{
-			if (textureID != 0 && data != nullptr)
+			if (textureID != 0 && data.empty())
 			{
 				glBindTexture(GL_TEXTURE_2D, textureID);
 				glTexSubImage2D(
@@ -71,20 +73,20 @@ namespace core
 					height,
 					channels == 4 ? GL_RGBA : GL_RGB, // choose format based on channels
 					GL_UNSIGNED_BYTE,
-					data
+					data.data()
 				);
 			}
 		}
 
 		void Clear()
 		{
-			if (data) {
-				stbi_image_free(data);
+			if (data.empty() != 0) {
+				stbi_image_free(static_cast<unsigned char*>(data.data()));
+				data.clear();
 			}
 			if (textureID != 0) {
 				glDeleteTextures(1, &textureID);
 			}
-			data = nullptr;
 			width = 0;
 			height = 0;
 			channels = 0;

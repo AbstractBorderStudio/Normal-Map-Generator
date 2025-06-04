@@ -25,5 +25,13 @@ namespace core
 		AppData(int w, int h, const char* t)
 			: window(nullptr), width(w), height(h), title(t), inputImage(), outputImage(), 
 			  normalMapGenerator() {}
+		void Cleanup() {
+			if (window) {
+				glfwDestroyWindow(window);
+			}
+			glfwTerminate();
+			inputImage.Clear();
+			outputImage.Clear();
+		}
 	};
 }
