@@ -13,6 +13,7 @@
 #include "imgui_impl_opengl3.h"
 
 #include <windows.h>
+#include <shlobj.h>
 #include <commdlg.h>
 #include <string>
 
@@ -28,10 +29,13 @@ namespace core
 			bool isToolActive;
 			std::string inputImagePath;
 			float inputZoom = 1.0f;
+			ImVec2 inputPanOffset = ImVec2(0.0f, 0.0f);
 			float outputZoom = 1.0f;
+			ImVec2 outputPanOffset = ImVec2(0.0f, 0.0f);
 
 			bool TryOpenFileDialog(std::string &filePath);
-			ImVec2 ComputeDynamicImageSize(Image *image, float zoom);
+			ImVec2 ComputeDynamicImageSize(Image *image, float zoom, ImVec2 panOffset);
+			void HandleInput(float *zoom, ImVec2 *panOffset);
 		public:
 			UserInterface();
 

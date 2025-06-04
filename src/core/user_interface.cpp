@@ -52,19 +52,32 @@ void core::UserInterface::Render(AppData *data)
     
     // App interface
 	ImGui::Begin("App", &isToolActive, window_flags);
-	ImGui::SeparatorText("General");
+	ImGui::SeparatorText("Settings");
 	if (ImGui::Button("Open File"))
 	{
 		if (TryOpenFileDialog(inputImagePath))
 		{
 			std::cout << "Selected file: " << inputImagePath << std::endl;
+			ImageUtils::TryLoadImage(inputImagePath, &data->inputImage);
 		}
 	}
-	
-	ImGui::Text("Current Image Path: %s", inputImagePath.c_str());
+	if (!inputImagePath.empty())
+	{
+		ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(100, 100, 100, 255)); // light gray
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
+		ImGui::BeginChild("##InputPathBox", ImVec2(0, ImGui::GetTextLineHeight() * 3), false, ImGuiWindowFlags_NoScrollbar);
 
-	if (ImGui::Button("Load"))
-		ImageUtils::TryLoadImage(inputImagePath, &data->inputImage);
+		// Add padding: 8px left/right, 4px top/bottom
+		ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 8.0f);
+		ImGui::Dummy(ImVec2(0, 4.0f)); // top padding
+		ImGui::TextWrapped("%s", inputImagePath.c_str());
+		ImGui::Dummy(ImVec2(0, 4.0f)); // bottom padding
+
+		ImGui::EndChild();
+		ImGui::PopStyleVar();
+		ImGui::PopStyleColor();
+	}
+	ImGui::SeparatorText("Settings/Actions");
 	if (ImGui::Button("Process"))
 	{
 		data->normalMapGenerator.GenerateNormalMap(
@@ -85,12 +98,22 @@ void core::UserInterface::Render(AppData *data)
 	}
 	if (ImGui::Button("Save"))
 	{
-		if (!data->outputImage.IsValid())
+		if (data->outputImage.IsValid())
 		{
-			std::cout << "Output image is not valid!" << std::endl;
-			return;
+			std::string savePath;
+			if (TryOpenFileDialog(savePath))
+			{
+				if (!savePath.empty())
+				{
+					ImageUtils::SaveImage(savePath, &data->outputImage);
+					std::cout << "Saving to: " << savePath << std::endl;
+				}
+			}
 		}
-		ImageUtils::SaveImage("../resources/output.png", &data->outputImage);
+		else
+		{
+			std::cout << "No output image to save." << std::endl;
+		}
 	}
     ImGui::End();
 	// -----
@@ -98,24 +121,20 @@ void core::UserInterface::Render(AppData *data)
 	// Input preview and Output preview
 	// -----
 	ImGui::Begin("Input Preview", &isToolActive, preview_flags);
-	if (ImGui::IsWindowHovered() && io->MouseWheel != 0.0f)
-		inputZoom += ImGui::GetIO().MouseWheel * 0.1f;
-	inputZoom = std::clamp(inputZoom, 0.1f, 20.0f);
+	HandleInput(&inputZoom, &inputPanOffset);
 	if (data->inputImage.IsValid())
 	{
-		auto img_size = ComputeDynamicImageSize(&data->inputImage, inputZoom);
+		auto img_size = ComputeDynamicImageSize(&data->inputImage, inputZoom, inputPanOffset);
 		ImGui::Image(data->inputImage.textureID, img_size);
 	}
 	ImGui::End();
 
 	// Output Preview
 	ImGui::Begin("Output Preview", &isToolActive, preview_flags);
-		if (ImGui::IsWindowHovered() && io->MouseWheel != 0.0f)
-		outputZoom += ImGui::GetIO().MouseWheel * 0.1f;
-	outputZoom = std::clamp(outputZoom, 0.01f, 20.0f);
+	HandleInput(&outputZoom, &outputPanOffset);
 	if (data->outputImage.IsValid())
 	{
-		auto img_size = ComputeDynamicImageSize(&data->outputImage, outputZoom);
+		auto img_size = ComputeDynamicImageSize(&data->outputImage, outputZoom, outputPanOffset);
 		ImGui::Image(data->outputImage.textureID, img_size);
 	}
 	ImGui::End();
@@ -154,7 +173,7 @@ bool core::UserInterface::TryOpenFileDialog(std::string &filePath)
     ofn.lpstrFilter = "PNG Files\0*.png\0";
     ofn.lpstrFile = fileName;
     ofn.nMaxFile = MAX_PATH;
-    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+    ofn.Flags = OFN_PATHMUSTEXIST;
     ofn.lpstrDefExt = "png";
 
     if (GetOpenFileNameA(&ofn)) {
@@ -162,31 +181,46 @@ bool core::UserInterface::TryOpenFileDialog(std::string &filePath)
 
         // Convert backslashes to forward slashes
         std::replace(filePath.begin(), filePath.end(), '\\', '/');
-        //EscapeWhitespace(filePath);
         return true;
     }
 
     return false;
 }
 
-ImVec2 core::UserInterface::ComputeDynamicImageSize(Image *image, float zoom)
+ImVec2 core::UserInterface::ComputeDynamicImageSize(Image *image, float zoom, ImVec2 panOffset)
 {
 	float avail_height = ImGui::GetWindowHeight();
 	float avail_width = ImGui::GetWindowWidth();
 	float aspect = (float)image->width / (float)image->height;
-	ImVec2 img_size = ImVec2(avail_height * aspect * zoom, avail_height * zoom);
+	ImVec2 img_size = ImVec2((float)image->width * zoom, (float)image->height * zoom);
 
 	// Clamp image size to window width if needed
 	if (img_size.x > avail_width) {
 		img_size.x = avail_width;
-		img_size.y = avail_width / aspect;
+		img_size.y = avail_width;
 	}
 
 	// Center image horizontally and vertically
-	float x_offset = (avail_width - img_size.x) * 0.5f;
-	float y_offset = (avail_height - img_size.y) * 0.5f;
+	float x_offset = (avail_width - img_size.x) * 0.5f + panOffset.x;
+	float y_offset = (avail_height - img_size.y) * 0.5f + panOffset.y;;
 	if (x_offset > 0 || y_offset > 0)
 		ImGui::SetCursorPos(ImVec2(x_offset > 0 ? x_offset : 0, y_offset > 0 ? y_offset : 0));
 	
 	return img_size;
+}
+
+void core::UserInterface::HandleInput(float *zoom, ImVec2 *panOffset) 
+{
+	// Handle zoom
+	if (ImGui::IsWindowHovered() && io->MouseWheel != 0.0f)
+		*zoom += ImGui::GetIO().MouseWheel * 0.1f;
+	*zoom = std::clamp(*zoom, 0.1f, 20.0f);
+
+	// Handle pan (drag with right mouse button)
+	if (ImGui::IsWindowHovered() && ImGui::IsMouseDragging(ImGuiMouseButton_Right)) {
+		ImVec2 drag_delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Right);
+		panOffset->x += drag_delta.x;
+		panOffset->y += drag_delta.y;
+		ImGui::ResetMouseDragDelta(ImGuiMouseButton_Right);
+	}
 }
