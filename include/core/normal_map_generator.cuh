@@ -23,6 +23,7 @@ namespace core {
     public:
         NormalMapGenerator() = default;
         ~NormalMapGenerator() = default;
-        void GenerateNormalMap(Image *inputImage, Image* outputImage);
+        void GenerateNormalMap(Image* inputImage, Image* outputImage, float strength = 1.0f);
+        void GenerateNormalMapCPU(Image* inputImage, Image* outputImage, float strength = 1.0f);
     };
 }

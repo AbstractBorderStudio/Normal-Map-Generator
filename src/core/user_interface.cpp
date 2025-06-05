@@ -5,9 +5,9 @@ core::UserInterface::UserInterface()
 	isToolActive = false;
 	io = nullptr;
 	// Initialize ImGui Docking and Window Flags
-	dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
-	window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse;
-	preview_flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
+	dockspaceFlags = ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_AutoHideTabBar;
+	settingsWindowFlags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoMove;
+	previewWindowFlags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoMove;
 
 	inputImagePath = "";
 }
@@ -47,98 +47,16 @@ void core::UserInterface::Render(AppData *data)
 	
 	// DockSpacev
     if (io->ConfigFlags & ImGuiConfigFlags_DockingEnable)
-        ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), dockspace_flags);
-    // -----
+        ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), dockspaceFlags);
     
-    // App interface
-	ImGui::Begin("App", &isToolActive, window_flags);
-	ImGui::SeparatorText("Settings");
-	if (ImGui::Button("Open File"))
-	{
-		if (TryOpenFileDialog(inputImagePath))
-		{
-			std::cout << "Selected file: " << inputImagePath << std::endl;
-			ImageUtils::TryLoadImage(inputImagePath, &data->inputImage);
-		}
-	}
-	if (!inputImagePath.empty())
-	{
-		ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(100, 100, 100, 255)); // light gray
-		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
-		ImGui::BeginChild("##InputPathBox", ImVec2(0, ImGui::GetTextLineHeight() * 3), false, ImGuiWindowFlags_NoScrollbar);
+    // Render Settings Window
+	RenderSettingsWindow(data);
 
-		// Add padding: 8px left/right, 4px top/bottom
-		ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 8.0f);
-		ImGui::Dummy(ImVec2(0, 4.0f)); // top padding
-		ImGui::TextWrapped("%s", inputImagePath.c_str());
-		ImGui::Dummy(ImVec2(0, 4.0f)); // bottom padding
+	// Render Input preview
+	RenderPreviewWindow("Input preview", &data->inputImage, &inputZoom, &inputPanOffset);
 
-		ImGui::EndChild();
-		ImGui::PopStyleVar();
-		ImGui::PopStyleColor();
-	}
-	ImGui::SeparatorText("Settings/Actions");
-	if (ImGui::Button("Process"))
-	{
-		data->normalMapGenerator.GenerateNormalMap(
-			&data->inputImage, 
-			&data->outputImage
-		);
-	}
-	if (ImGui::Button("Clear"))
-	{
-		if (data->inputImage.IsValid())
-		{
-			data->inputImage.Clear();
-		}
-		if (data->outputImage.IsValid())
-		{
-			data->outputImage.Clear();
-		}
-	}
-	if (ImGui::Button("Save"))
-	{
-		if (data->outputImage.IsValid())
-		{
-			std::string savePath;
-			if (TryOpenFileDialog(savePath))
-			{
-				if (!savePath.empty())
-				{
-					ImageUtils::SaveImage(savePath, &data->outputImage);
-					std::cout << "Saving to: " << savePath << std::endl;
-				}
-			}
-		}
-		else
-		{
-			std::cout << "No output image to save." << std::endl;
-		}
-	}
-    ImGui::End();
-	// -----
-
-	// Input preview and Output preview
-	// -----
-	ImGui::Begin("Input Preview", &isToolActive, preview_flags);
-	HandleInput(&inputZoom, &inputPanOffset);
-	if (data->inputImage.IsValid())
-	{
-		auto img_size = ComputeDynamicImageSize(&data->inputImage, inputZoom, inputPanOffset);
-		ImGui::Image(data->inputImage.textureID, img_size);
-	}
-	ImGui::End();
-
-	// Output Preview
-	ImGui::Begin("Output Preview", &isToolActive, preview_flags);
-	HandleInput(&outputZoom, &outputPanOffset);
-	if (data->outputImage.IsValid())
-	{
-		auto img_size = ComputeDynamicImageSize(&data->outputImage, outputZoom, outputPanOffset);
-		ImGui::Image(data->outputImage.textureID, img_size);
-	}
-	ImGui::End();
-    // -----
+	// Render Output Preview
+	RenderPreviewWindow("Output preview" , &data->outputImage, &outputZoom, &outputPanOffset);
 
 	// imgui rendering
     ImGui::Render();
@@ -192,12 +110,12 @@ ImVec2 core::UserInterface::ComputeDynamicImageSize(Image *image, float zoom, Im
 	float avail_height = ImGui::GetWindowHeight();
 	float avail_width = ImGui::GetWindowWidth();
 	float aspect = (float)image->width / (float)image->height;
-	ImVec2 img_size = ImVec2((float)image->width * zoom, (float)image->height * zoom);
+	ImVec2 img_size = ImVec2((float)image->width * aspect * zoom, (float)image->height * aspect * zoom);
 
 	// Clamp image size to window width if needed
 	if (img_size.x > avail_width) {
 		img_size.x = avail_width;
-		img_size.y = avail_width;
+		img_size.y = avail_width / aspect;
 	}
 
 	// Center image horizontally and vertically
@@ -213,8 +131,8 @@ void core::UserInterface::HandleInput(float *zoom, ImVec2 *panOffset)
 {
 	// Handle zoom
 	if (ImGui::IsWindowHovered() && io->MouseWheel != 0.0f)
-		*zoom += ImGui::GetIO().MouseWheel * 0.1f;
-	*zoom = std::clamp(*zoom, 0.1f, 20.0f);
+		*zoom += ImGui::GetIO().MouseWheel * 0.05f;
+	*zoom = std::clamp(*zoom, 0.05f, 1.0f);
 
 	// Handle pan (drag with right mouse button)
 	if (ImGui::IsWindowHovered() && ImGui::IsMouseDragging(ImGuiMouseButton_Right)) {
@@ -223,4 +141,107 @@ void core::UserInterface::HandleInput(float *zoom, ImVec2 *panOffset)
 		panOffset->y += drag_delta.y;
 		ImGui::ResetMouseDragDelta(ImGuiMouseButton_Right);
 	}
+}
+
+void core::UserInterface::RenderSettingsWindow(AppData *data)
+{
+	ImGui::Begin("Normal Map Generator Settings", &isToolActive, settingsWindowFlags);
+	if (ImGui::Button("Open File"))
+	{
+		if (TryOpenFileDialog(inputImagePath))
+		{
+			std::cout << "Selected file: " << inputImagePath << std::endl;
+			if (ImageUtils::TryLoadImage(inputImagePath, &data->inputImage))
+			{
+				// if image is loaded successfully, update the texture
+				data->normalMapGenerator.GenerateNormalMap(
+					&data->inputImage, 
+					&data->outputImage,
+					currentMapStrength
+				);
+			}
+			
+		}
+	}
+	if (!inputImagePath.empty())
+	{
+		ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(100, 100, 100, 255)); // light gray
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
+		ImGui::BeginChild("##InputPathBox", ImVec2(0, ImGui::GetTextLineHeight() * 3), false, ImGuiWindowFlags_NoScrollbar);
+
+		// Add padding: 8px left/right, 4px top/bottom
+		ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 8.0f);
+		ImGui::Dummy(ImVec2(0, 4.0f)); // top padding
+		ImGui::TextWrapped("%s", inputImagePath.c_str());
+		ImGui::Dummy(ImVec2(0, 4.0f)); // bottom padding
+
+		ImGui::EndChild();
+		ImGui::PopStyleVar();
+		ImGui::PopStyleColor();
+	}
+	if (ImGui::Button("Clear"))
+	{
+		if (data->inputImage.IsValid())
+		{
+			data->inputImage.Clear();
+		}
+		if (data->outputImage.IsValid())
+		{
+			data->outputImage.Clear();
+		}
+	}
+	if (ImGui::Button("Save"))
+	{
+		if (data->outputImage.IsValid())
+		{
+			std::string savePath;
+			if (TryOpenFileDialog(savePath))
+			{
+				if (!savePath.empty())
+				{
+					ImageUtils::SaveImage(savePath, &data->outputImage);
+					std::cout << "Saving to: " << savePath << std::endl;
+				}
+			}
+		}
+		else
+		{
+			std::cout << "No output image to save." << std::endl;
+		}
+	}
+	if (ImGui::Button("Reset Pan and Zoom"))
+	{
+		inputZoom = 1.0f;
+		outputZoom = 1.0f;
+		inputPanOffset = ImVec2(0.0f, 0.0f);
+		outputPanOffset = ImVec2(0.0f, 0.0f);
+	}
+	ImGui::Separator();
+	ImGui::Text("Normal Map Strength:");
+	ImGui::SliderFloat("Strength", &normalMapStrength, 0.0f, 1.0f, "%.8f");
+	if (normalMapStrength != currentMapStrength)
+	{
+		currentMapStrength = normalMapStrength;
+		data->normalMapGenerator.GenerateNormalMap(
+			&data->inputImage, 
+			&data->outputImage,
+			currentMapStrength
+		);
+	}
+
+	ImGui::Text("Input Image Size: %dx%d", data->inputImage.width, data->inputImage.height);
+	ImGui::Text("Output Image Size: %dx%d", data->outputImage.width, data->outputImage.height);
+    ImGui::End();
+}
+
+void core::UserInterface::RenderPreviewWindow(const char* previewName, Image *image, float *zoom, ImVec2 *panOffset) 
+{
+	ImGui::Begin(previewName, &isToolActive, previewWindowFlags);
+	HandleInput(zoom, panOffset);
+	if (image->IsValid())
+	{
+		auto img_size = ComputeDynamicImageSize(image, *zoom, *panOffset);
+		ImGui::Image(image->textureID, img_size);
+	}
+	ImGui::End();
 }

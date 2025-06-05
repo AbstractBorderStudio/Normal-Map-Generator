@@ -19,26 +19,38 @@
 
 namespace core
 {
+	enum HardwareType
+	{
+		CPU,
+		GPU
+	};
+
 	class UserInterface
 	{
 		private:
+			// Private members
 			ImGuiIO* io;
-			ImGuiDockNodeFlags dockspace_flags;
-			ImGuiDockNodeFlags window_flags;
-			ImGuiDockNodeFlags preview_flags;
+			ImGuiDockNodeFlags dockspaceFlags;
+			ImGuiDockNodeFlags settingsWindowFlags;
+			ImGuiDockNodeFlags previewWindowFlags;
 			bool isToolActive;
 			std::string inputImagePath;
 			float inputZoom = 1.0f;
-			ImVec2 inputPanOffset = ImVec2(0.0f, 0.0f);
 			float outputZoom = 1.0f;
+			ImVec2 inputPanOffset = ImVec2(0.0f, 0.0f);
 			ImVec2 outputPanOffset = ImVec2(0.0f, 0.0f);
+			float normalMapStrength = 0.1f;
+			float currentMapStrength = normalMapStrength;
+			HardwareType hardwareType = GPU;
 
+			// Private methods
 			bool TryOpenFileDialog(std::string &filePath);
 			ImVec2 ComputeDynamicImageSize(Image *image, float zoom, ImVec2 panOffset);
 			void HandleInput(float *zoom, ImVec2 *panOffset);
+			void RenderSettingsWindow(AppData *data);
+			void RenderPreviewWindow(const char* previewName, Image *image, float *zoom, ImVec2 *panOffset);
 		public:
 			UserInterface();
-
 			void HandleInput();
 			bool TryInit(GLFWwindow* window);
 			void Render(AppData *data);

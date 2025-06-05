@@ -39,6 +39,13 @@ if (EXISTS "${CMAKE_SOURCE_DIR}/resources")
   ) 
 endif()
 
+if (EXISTS "${CMAKE_SOURCE_DIR}/settings")
+  file(
+    COPY "${CMAKE_SOURCE_DIR}/settings/imgui.ini"
+    DESTINATION "${CMAKE_BINARY_DIR}/Debug"
+  )
+endif()
+
 # create executable
 add_executable(${PROJECT_NAME} ${SRC_FILES})
 

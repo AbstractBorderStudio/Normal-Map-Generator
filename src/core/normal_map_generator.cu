@@ -1,30 +1,7 @@
 #include <normal_map_generator.cuh>
 
 __device__
-void GenerateHeightMap(unsigned char* inputData, unsigned char* outputData, int width, int height, int pixelIndex)
-{
-	// compute luminnace as heightmap
-	float luminance = 0.299f * inputData[pixelIndex] + 
-					  0.587f * inputData[pixelIndex + 1] + 
-					  0.114f * inputData[pixelIndex + 2];
-
-	// output pixel RGB values)
-	outputData[pixelIndex] 		= static_cast<unsigned char>(luminance); // R
-	outputData[pixelIndex + 1] 		= static_cast<unsigned char>(luminance); // R
-	outputData[pixelIndex + 2] 		= static_cast<unsigned char>(luminance); // R
-	outputData[pixelIndex + 3] 		= 255; // R
-}
-
-__device__
-int GetPixelIndex(int x, int y, int width, int height, int channels) {
-	// if (x < 0 || x >= width || y < 0 || y >= height) {
-	// 	return -1; // Out of bounds
-	// }
-	return (y * width + x) * channels;
-}
-
-__device__
-int clamp(int value, int min, int max) {
+int clampGPU(int value, int min, int max) {
 	return (value < min) ? min : (value > max) ? max : value;
 }
 
@@ -38,7 +15,7 @@ __device__ float3 normalize(float3 v) {
 }
 
 __global__
-void GenerateNormalMapKernel(unsigned char* inputData, unsigned char* outputData, int width, int height, int channels) {
+void GenerateNormalMapKernel(unsigned char* inputData, unsigned char* outputData, int width, int height, int channels, float strength = 1.0f) {
 	int x = threadIdx.x + blockIdx.x * blockDim.x;
     int y = threadIdx.y + blockIdx.y * blockDim.y;
 
@@ -46,8 +23,8 @@ void GenerateNormalMapKernel(unsigned char* inputData, unsigned char* outputData
 
     // Helper to get clamped luminance
     auto getLuminance = [&](int px, int py) -> float {
-        px = clamp(px, 0, width - 1);
-        py = clamp(py, 0, height - 1);
+        px = clampGPU(px, 0, width - 1);
+        py = clampGPU(py, 0, height - 1);
         int idx = (py * width + px) * channels;
         return 0.299f * inputData[idx] + 0.587f * inputData[idx + 1] + 0.114f * inputData[idx + 2];
     };
@@ -57,8 +34,8 @@ void GenerateNormalMapKernel(unsigned char* inputData, unsigned char* outputData
     float top    = getLuminance(x, y - 1);
     float bottom = getLuminance(x, y + 1);
 
-    float dx = right - left;
-    float dy = bottom - top;
+    float dx = (right - left) * strength;
+    float dy = (bottom - top) * strength;
 
     float3 normal = normalize(make_float3(-dx, -dy, 1.0f));
 
@@ -66,8 +43,9 @@ void GenerateNormalMapKernel(unsigned char* inputData, unsigned char* outputData
     outputData[pixelIndex + 0] = static_cast<unsigned char>((normal.x * 0.5f + 0.5f) * 255);
     outputData[pixelIndex + 1] = static_cast<unsigned char>((normal.y * 0.5f + 0.5f) * 255);
     outputData[pixelIndex + 2] = static_cast<unsigned char>((normal.z * 0.5f + 0.5f) * 255);
-    if (channels == 4)
-        outputData[pixelIndex + 3] = inputData[pixelIndex + 3]; // Preserve alpha channel if present
+    // Preserve alpha channel if present
+	if (channels == 4)
+        outputData[pixelIndex + 3] = inputData[pixelIndex + 3]; 
 }
 
 void core::NormalMapGenerator::LoadImageDataToDevice(Image* image)
@@ -130,7 +108,7 @@ void core::NormalMapGenerator::ClearDeviceMemory()
 	outputBytes = 0;
 }
 
-void core::NormalMapGenerator::GenerateNormalMap(Image* inputImage, Image* outputImage) {
+void core::NormalMapGenerator::GenerateNormalMap(Image* inputImage, Image* outputImage, float strength) {
 	if (!inputImage->IsValid()) {
 		return;
 	}
@@ -150,7 +128,7 @@ void core::NormalMapGenerator::GenerateNormalMap(Image* inputImage, Image* outpu
 					(inputImage->height + blockSize.y - 1) / blockSize.y);
 
 	// Launch the kernel to generate the normal map
-	GenerateNormalMapKernel<<<gridSize, blockSize>>>(inputData, outputData, inputImage->width, inputImage->height, inputImage->channels);
+	GenerateNormalMapKernel<<<gridSize, blockSize>>>(inputData, outputData, inputImage->width, inputImage->height, inputImage->channels, strength);
 	cudaDeviceSynchronize();
 	
 	// Copy the output data from device to host
@@ -161,4 +139,20 @@ void core::NormalMapGenerator::GenerateNormalMap(Image* inputImage, Image* outpu
 
 	outputImage->Init("", result, inputImage->width, inputImage->height, inputImage->channels);
 	ClearDeviceMemory();
+}
+
+// Generate a normal map from an RGB image (height from luminance)
+void core::NormalMapGenerator::GenerateNormalMapCPU(Image* inputImage, Image* outputImage, float strength) {
+	auto clamp = [&](int v, int minv, int maxv) -> int {
+		return std::max(minv, std::min(v, maxv));
+	};
+	// Helper to clamp values
+    auto getLuminance = [&](int x, int y) -> float {
+        x = clamp(x, 0, inputImage->width - 1);
+        y = clamp(y, 0, inputImage->height - 1);
+        int idx = (y * inputImage->width + x) * inputImage->channels;
+        return 0.299f * inputData[idx] + 0.587f * inputData[idx + 1] + 0.114f * inputData[idx + 2];
+    };
+
+    
 }
