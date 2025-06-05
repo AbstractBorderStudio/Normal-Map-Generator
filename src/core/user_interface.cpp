@@ -146,6 +146,12 @@ void core::UserInterface::HandleInput(float *zoom, ImVec2 *panOffset)
 void core::UserInterface::RenderSettingsWindow(AppData *data)
 {
 	ImGui::Begin("Normal Map Generator Settings", &isToolActive, settingsWindowFlags);
+	ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Normal Map Generator");
+	ImGui::Separator();
+	ImGui::TextWrapped("Click \"Open File\" to select an image file. Currently supported formats are PNG.");
+	ImGui::TextWrapped("Use the \"Hardware Type\" to select between GPU and CPU normal map generation.");
+	ImGui::TextWrapped("Changing the \"Normal Map Strength\" to recalculate the output with a different slope intensity.");
+	ImGui::Separator();
 	if (ImGui::Button("Open File"))
 	{
 		if (TryOpenFileDialog(inputImagePath))
@@ -154,83 +160,90 @@ void core::UserInterface::RenderSettingsWindow(AppData *data)
 			if (ImageUtils::TryLoadImage(inputImagePath, &data->inputImage))
 			{
 				// if image is loaded successfully, update the texture
-				data->normalMapGenerator.GenerateNormalMap(
-					&data->inputImage, 
-					&data->outputImage,
-					currentMapStrength
-				);
+				LunchNormalMapGeneration(data);
 			}
 			
 		}
 	}
-	if (!inputImagePath.empty())
+	
+	ImGui::Dummy(ImVec2(0.0f, 10.0f));
+	ImGui::Separator();
+	ImGui::Combo("Hardware Type", &hardwareType, "GPU\0CPU\0");
+	if (hardwareType != currentHardwareType)
 	{
-		ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(100, 100, 100, 255)); // light gray
-		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
-		ImGui::BeginChild("##InputPathBox", ImVec2(0, ImGui::GetTextLineHeight() * 3), false, ImGuiWindowFlags_NoScrollbar);
-
-		// Add padding: 8px left/right, 4px top/bottom
-		ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 8.0f);
-		ImGui::Dummy(ImVec2(0, 4.0f)); // top padding
-		ImGui::TextWrapped("%s", inputImagePath.c_str());
-		ImGui::Dummy(ImVec2(0, 4.0f)); // bottom padding
-
-		ImGui::EndChild();
-		ImGui::PopStyleVar();
-		ImGui::PopStyleColor();
-	}
-	if (ImGui::Button("Clear"))
-	{
-		if (data->inputImage.IsValid())
-		{
-			data->inputImage.Clear();
-		}
-		if (data->outputImage.IsValid())
-		{
-			data->outputImage.Clear();
-		}
-	}
-	if (ImGui::Button("Save"))
-	{
-		if (data->outputImage.IsValid())
-		{
-			std::string savePath;
-			if (TryOpenFileDialog(savePath))
-			{
-				if (!savePath.empty())
-				{
-					ImageUtils::SaveImage(savePath, &data->outputImage);
-					std::cout << "Saving to: " << savePath << std::endl;
-				}
-			}
-		}
-		else
-		{
-			std::cout << "No output image to save." << std::endl;
-		}
-	}
-	if (ImGui::Button("Reset Pan and Zoom"))
-	{
-		inputZoom = 1.0f;
-		outputZoom = 1.0f;
-		inputPanOffset = ImVec2(0.0f, 0.0f);
-		outputPanOffset = ImVec2(0.0f, 0.0f);
+		currentHardwareType = hardwareType;
+		LunchNormalMapGeneration(data);
 	}
 	ImGui::Separator();
-	ImGui::Text("Normal Map Strength:");
-	ImGui::SliderFloat("Strength", &normalMapStrength, 0.0f, 1.0f, "%.8f");
-	if (normalMapStrength != currentMapStrength)
+	ImGui::Dummy(ImVec2(0.0f, 10.0f));
+
+	if (data->inputImage.IsValid())
 	{
-		currentMapStrength = normalMapStrength;
-		data->normalMapGenerator.GenerateNormalMap(
-			&data->inputImage, 
-			&data->outputImage,
-			currentMapStrength
-		);
+		if (ImGui::Button("Save"))
+		{
+			if (data->outputImage.IsValid())
+			{
+				std::string savePath;
+				if (TryOpenFileDialog(savePath))
+				{
+					if (!savePath.empty())
+					{
+						ImageUtils::SaveImage(savePath, &data->outputImage);
+						std::cout << "Saving to: " << savePath << std::endl;
+					}
+				}
+			}
+			else
+			{
+				std::cout << "No output image to save." << std::endl;
+			}
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Clear"))
+		{
+			if (data->inputImage.IsValid())
+			{
+				data->inputImage.Clear();
+			}
+			if (data->outputImage.IsValid())
+			{
+				data->outputImage.Clear();
+			}
+		}
+		
+		
+		if (ImGui::Button("Reset Pan and Zoom"))
+		{
+			inputZoom = 1.0f;
+			outputZoom = 1.0f;
+			inputPanOffset = ImVec2(0.0f, 0.0f);
+			outputPanOffset = ImVec2(0.0f, 0.0f);
+		}
+		
+		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		
+		ImGui::Separator();
+		ImGui::Text("Input Image Size: %dx%d", data->inputImage.width, data->inputImage.height);
+		ImGui::Text("Output Image Size: %dx%d", data->outputImage.width, data->outputImage.height);
+		ImGui::Separator();
+		
+		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		
+		ImGui::Text("Normal Map Strength:");
+		ImGui::SliderFloat("Strength", &normalMapStrength, 0.0f, 1.0f, "%.8f");
+		if (normalMapStrength != currentMapStrength)
+		{
+			currentMapStrength = normalMapStrength;
+			LunchNormalMapGeneration(data);
+		}
+
+		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		ImGui::Separator();
+		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		
+		ImGui::Text("Last Execution time for %s: %ld ms", currentHardwareType ? "CPU" : "GPU", timeNeeded);
 	}
 
-	ImGui::Text("Input Image Size: %dx%d", data->inputImage.width, data->inputImage.height);
-	ImGui::Text("Output Image Size: %dx%d", data->outputImage.width, data->outputImage.height);
     ImGui::End();
 }
 
@@ -244,4 +257,29 @@ void core::UserInterface::RenderPreviewWindow(const char* previewName, Image *im
 		ImGui::Image(image->textureID, img_size);
 	}
 	ImGui::End();
+}
+
+void core::UserInterface::LunchNormalMapGeneration(AppData *data)
+{
+	auto timeStart = std::chrono::high_resolution_clock::now();
+	switch (currentHardwareType)
+	{
+	case GPU:
+		data->normalMapGenerator.GenerateNormalMap(
+			&data->inputImage, 
+			&data->outputImage,
+			currentMapStrength
+		);
+		break;
+	case CPU:
+		data->normalMapGenerator.GenerateNormalMapCPU(
+			&data->inputImage, 
+			&data->outputImage,
+			currentMapStrength
+		);
+	default:
+		break;
+	}
+	auto timeEnd = std::chrono::high_resolution_clock::now();
+	timeNeeded = std::chrono::duration_cast<std::chrono::milliseconds>(timeEnd - timeStart).count();
 }

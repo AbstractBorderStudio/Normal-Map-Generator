@@ -1,5 +1,6 @@
 #include <normal_map_generator.cuh>
 
+#pragma region GPU Normal Map Generation
 __device__
 int clampGPU(int value, int min, int max) {
 	return (value < min) ? min : (value > max) ? max : value;
@@ -108,6 +109,10 @@ void core::NormalMapGenerator::ClearDeviceMemory()
 	outputBytes = 0;
 }
 
+/// @brief Generates a normal map from the input image using GPU.
+/// @param inputImage Input image to generate the normal map from.
+/// @param outputImage Normal map output image.
+/// @param strength Strength of the normal map generation.
 void core::NormalMapGenerator::GenerateNormalMap(Image* inputImage, Image* outputImage, float strength) {
 	if (!inputImage->IsValid()) {
 		return;
@@ -140,19 +145,68 @@ void core::NormalMapGenerator::GenerateNormalMap(Image* inputImage, Image* outpu
 	outputImage->Init("", result, inputImage->width, inputImage->height, inputImage->channels);
 	ClearDeviceMemory();
 }
+#pragma endregion
 
-// Generate a normal map from an RGB image (height from luminance)
+
+#pragma region CPU Normal Map Generation
+/// @brief Generates a normal map from the input image using CPU.
+/// @param inputImage Input image to generate the normal map from.
+/// @param outputImage Normal map output image.
+/// @param strength Strength of the normal map generation.
 void core::NormalMapGenerator::GenerateNormalMapCPU(Image* inputImage, Image* outputImage, float strength) {
+	if (!inputImage || !inputImage->IsValid()) return;
+	
+    int width = inputImage->width;
+    int height = inputImage->height;
+    int channels = inputImage->channels;
+    const unsigned char* in = inputImage->data.data();
+
+    std::vector<unsigned char> out(width * height * channels);
+
 	auto clamp = [&](int v, int minv, int maxv) -> int {
 		return std::max(minv, std::min(v, maxv));
 	};
+
 	// Helper to clamp values
     auto getLuminance = [&](int x, int y) -> float {
-        x = clamp(x, 0, inputImage->width - 1);
-        y = clamp(y, 0, inputImage->height - 1);
-        int idx = (y * inputImage->width + x) * inputImage->channels;
-        return 0.299f * inputData[idx] + 0.587f * inputData[idx + 1] + 0.114f * inputData[idx + 2];
-    };
+		x = clamp(x, 0, inputImage->width - 1);
+		y = clamp(y, 0, inputImage->height - 1);
+		int idx = (y * inputImage->width + x) * inputImage->channels;
+		return 0.299f * in[idx] + 0.587f * in[idx + 1] + 0.114f * in[idx + 2];
+	};
 
-    
+	// Loop through each pixel to calculate the normal map
+
+	for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            float left   = getLuminance(x - 1, y);
+            float right  = getLuminance(x + 1, y);
+            float top    = getLuminance(x, y - 1);
+            float bottom = getLuminance(x, y + 1);
+
+            float dx = (right - left) * strength;
+            float dy = (bottom - top) * strength;
+
+            float nx = -dx;
+            float ny = -dy;
+            float nz = 1.0f;
+
+            float len = std::sqrt(nx * nx + ny * ny + nz * nz);
+            if (len > 0.0f) {
+                nx /= len;
+                ny /= len;
+                nz /= len;
+            }
+
+            int idx = (y * width + x) * channels;
+            out[idx + 0] = static_cast<unsigned char>((nx * 0.5f + 0.5f) * 255);
+            out[idx + 1] = static_cast<unsigned char>((ny * 0.5f + 0.5f) * 255);
+            out[idx + 2] = static_cast<unsigned char>((nz * 0.5f + 0.5f) * 255);
+            if (channels == 4)
+                out[idx + 3] = in[idx + 3]; // preserve alpha
+        }
+    }
+
+    outputImage->Init("", out.data(), width, height, channels);
 }
+#pragma endregion

@@ -17,12 +17,14 @@
 #include <commdlg.h>
 #include <string>
 
+#include <chrono>
+
 namespace core
 {
 	enum HardwareType
 	{
-		CPU,
-		GPU
+		GPU = 0,
+		CPU = 1
 	};
 
 	class UserInterface
@@ -41,7 +43,9 @@ namespace core
 			ImVec2 outputPanOffset = ImVec2(0.0f, 0.0f);
 			float normalMapStrength = 0.1f;
 			float currentMapStrength = normalMapStrength;
-			HardwareType hardwareType = GPU;
+			int hardwareType = 0; // Default to GPU
+			int currentHardwareType = hardwareType;
+			long timeNeeded = 0;
 
 			// Private methods
 			bool TryOpenFileDialog(std::string &filePath);
@@ -49,6 +53,7 @@ namespace core
 			void HandleInput(float *zoom, ImVec2 *panOffset);
 			void RenderSettingsWindow(AppData *data);
 			void RenderPreviewWindow(const char* previewName, Image *image, float *zoom, ImVec2 *panOffset);
+			void LunchNormalMapGeneration(AppData *data);
 		public:
 			UserInterface();
 			void HandleInput();
