@@ -113,7 +113,7 @@ void core::NormalMapGenerator::ClearDeviceMemory()
 /// @param inputImage Input image to generate the normal map from.
 /// @param outputImage Normal map output image.
 /// @param strength Strength of the normal map generation.
-void core::NormalMapGenerator::GenerateNormalMap(Image* inputImage, Image* outputImage, float strength) {
+void core::NormalMapGenerator::GenerateNormalMapGPU(Image* inputImage, Image* outputImage, float strength) {
 	if (!inputImage->IsValid()) {
 		return;
 	}

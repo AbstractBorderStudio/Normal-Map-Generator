@@ -265,7 +265,7 @@ void core::UserInterface::LunchNormalMapGeneration(AppData *data)
 	switch (currentHardwareType)
 	{
 	case GPU:
-		data->normalMapGenerator.GenerateNormalMap(
+		data->normalMapGenerator.GenerateNormalMapGPU(
 			&data->inputImage, 
 			&data->outputImage,
 			currentMapStrength
