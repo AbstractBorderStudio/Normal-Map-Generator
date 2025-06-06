@@ -9,6 +9,8 @@
 #include <linmath.h>
 #include <algorithm>
 
+#define BLOCK_SIZE 16
+
 namespace core {
     class NormalMapGenerator {
     private:

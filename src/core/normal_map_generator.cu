@@ -1,10 +1,9 @@
 #include <normal_map_generator.cuh>
 
+/// @brief 
+__shared__ float tile[BLOCK_SIZE + 2][BLOCK_SIZE + 2];
+
 #pragma region GPU Normal Map Generation
-__device__
-int clampGPU(int value, int min, int max) {
-	return (value < min) ? min : (value > max) ? max : value;
-}
 
 __device__ float3 normalize(float3 v) {
     float length = sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
@@ -17,36 +16,74 @@ __device__ float3 normalize(float3 v) {
 
 __global__
 void GenerateNormalMapKernel(unsigned char* inputData, unsigned char* outputData, int width, int height, int channels, float strength = 1.0f) {
-	int x = threadIdx.x + blockIdx.x * blockDim.x;
-    int y = threadIdx.y + blockIdx.y * blockDim.y;
-
-    if (x >= width || y >= height) return;
-
-    // Helper to get clamped luminance
-    auto getLuminance = [&](int px, int py) -> float {
-        px = clampGPU(px, 0, width - 1);
-        py = clampGPU(py, 0, height - 1);
-        int idx = (py * width + px) * channels;
-        return 0.299f * inputData[idx] + 0.587f * inputData[idx + 1] + 0.114f * inputData[idx + 2];
+    // calculate global coordinates
+	int gx = threadIdx.x + blockIdx.x * blockDim.x;
+    int gy = threadIdx.y + blockIdx.y * blockDim.y;
+	
+	if (gx >= width || gy >= height || gx < 0 || gy < 0) {
+		return; // Out of bounds
+	}
+	
+	// Helper to get clamped luminance
+    auto getLuminance = [&](int idx) -> float {
+		return 0.299f * inputData[idx] + 0.587f * inputData[idx + 1] + 0.114f * inputData[idx + 2];
     };
+	
+	// calculate local coordinates with padding
+	int lx = threadIdx.x + 1; 
+	int ly = threadIdx.y + 1; 
+	int gidx = (gy * width + gx) * channels;
 
-    float left   = getLuminance(x - 1, y);
-    float right  = getLuminance(x + 1, y);
-    float top    = getLuminance(x, y - 1);
-    float bottom = getLuminance(x, y + 1);
+	// load the central pixel luminance into shared memory with padding
+	if (gx < width && gy < height) {
+		float lum = getLuminance(gidx);
+		tile[ly][lx] = lum;
+	}
 
-    float dx = (right - left) * strength;
-    float dy = (bottom - top) * strength;
+	// load the surrounding pixels into shared memory with padding
+	// Left
+	if (threadIdx.x == 0 && gx > 0) {
+		int idx = (gy * width + (gx - 1)) * channels;
+		tile[ly][lx - 1] = 0.299f * inputData[idx] + 0.587f * inputData[idx+1] + 0.114f * inputData[idx+2];
+	}
 
-    float3 normal = normalize(make_float3(-dx, -dy, 1.0f));
+	// Right
+	if (threadIdx.x == blockDim.x - 1 && gx < width - 1) {
+		int idx = (gy * width + (gx + 1)) * channels;
+		tile[ly][lx + 1] = 0.299f * inputData[idx] + 0.587f * inputData[idx+1] + 0.114f * inputData[idx+2];
+	}
 
-    int pixelIndex = (y * width + x) * channels;
-    outputData[pixelIndex + 0] = static_cast<unsigned char>((normal.x * 0.5f + 0.5f) * 255);
-    outputData[pixelIndex + 1] = static_cast<unsigned char>((normal.y * 0.5f + 0.5f) * 255);
-    outputData[pixelIndex + 2] = static_cast<unsigned char>((normal.z * 0.5f + 0.5f) * 255);
+	// Top
+	if (threadIdx.y == 0 && gy > 0) {
+		int idx = ((gy - 1) * width + gx) * channels;
+		tile[ly - 1][lx] = 0.299f * inputData[idx] + 0.587f * inputData[idx+1] + 0.114f * inputData[idx+2];
+	}
+
+	// Bottom
+	if (threadIdx.y == blockDim.y - 1 && gy < height - 1) {
+		int idx = ((gy + 1) * width + gx) * channels;
+		tile[ly + 1][lx] = 0.299f * inputData[idx] + 0.587f * inputData[idx+1] + 0.114f * inputData[idx+2];
+	}
+
+	// wait for all threads to finish loading data into shared memory
+	__syncthreads();
+
+	// use the shaded memory to calculate the normal map
+	float left   = tile[ly][lx - 1];
+	float right  = tile[ly][lx + 1];
+	float top    = tile[ly - 1][lx];
+	float bottom = tile[ly + 1][lx];
+
+	float dx = (right - left) * strength;
+	float dy = (bottom - top) * strength;
+
+	float3 normal = normalize(make_float3(-dx, -dy, 1.0f));
+    outputData[gidx + 0] = static_cast<unsigned char>((normal.x * 0.5f + 0.5f) * 255);
+    outputData[gidx + 1] = static_cast<unsigned char>((normal.y * 0.5f + 0.5f) * 255);
+    outputData[gidx + 2] = static_cast<unsigned char>((normal.z * 0.5f + 0.5f) * 255);
     // Preserve alpha channel if present
 	if (channels == 4)
-        outputData[pixelIndex + 3] = inputData[pixelIndex + 3]; 
+        outputData[gidx + 3] = inputData[gidx + 3]; 
 }
 
 void core::NormalMapGenerator::LoadImageDataToDevice(Image* image)
@@ -128,7 +165,7 @@ void core::NormalMapGenerator::GenerateNormalMapGPU(Image* inputImage, Image* ou
 	unsigned char* result = (unsigned char*)malloc(inputImage->width * inputImage->height * inputImage->channels * sizeof(unsigned char));
 	
 	// Compute grid and block sizes
-	dim3 blockSize(16, 16);
+	dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE);
 	dim3 gridSize((inputImage->width + blockSize.x - 1) / blockSize.x, 
 					(inputImage->height + blockSize.y - 1) / blockSize.y);
 
