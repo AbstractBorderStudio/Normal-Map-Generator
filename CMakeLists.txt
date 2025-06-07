@@ -31,14 +31,6 @@ file(GLOB_RECURSE SRC_FILES
     "${CMAKE_SOURCE_DIR}/src/*.cu"
 )
 
-# if resource folder exists copy it inside binary directory, TESTING PURPOSES
-if (EXISTS "${CMAKE_SOURCE_DIR}/resources")
-  file(
-    COPY "${CMAKE_SOURCE_DIR}/resources"
-    DESTINATION "${CMAKE_BINARY_DIR}"
-  ) 
-endif()
-
 if (EXISTS "${CMAKE_SOURCE_DIR}/settings")
   file(
     COPY "${CMAKE_SOURCE_DIR}/settings/imgui.ini"
