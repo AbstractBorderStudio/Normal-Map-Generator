@@ -16,6 +16,5 @@ build/
 cudaOutputProfiling/
 out/
 
-
 imgui.ini
-!resources/imgui.ini
+!settings/imgui.ini
