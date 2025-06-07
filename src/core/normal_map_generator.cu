@@ -1,7 +1,7 @@
 #include <normal_map_generator.cuh>
 
 /// @brief 
-__shared__ float tile[BLOCK_SIZE + 1][BLOCK_SIZE + 1];
+__shared__ float tile[BLOCK_SIZE + 1][BLOCK_SIZE + 2];
 
 #pragma region GPU Normal Map Generation
 
