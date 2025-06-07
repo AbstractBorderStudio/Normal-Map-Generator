@@ -34,9 +34,21 @@ void GenerateNormalMapKernel(unsigned char* inputData, unsigned char* outputData
     float right  = getLuminance(x + 1, y);
     float top    = getLuminance(x, y - 1);
     float bottom = getLuminance(x, y + 1);
+	float upLeft = getLuminance(x - 1, y - 1);
+	float upRight = getLuminance(x + 1, y - 1);
+	float downLeft = getLuminance(x - 1, y + 1);
+	float downRight = getLuminance(x + 1, y + 1);	
 
-    float dx = (right - left) * strength;
-    float dy = (bottom - top) * strength;
+    // compute sobel gradients
+	float dx = (
+		(upRight + 2 * right + downRight) -
+		(upLeft  + 2 * left  + downLeft)
+	) * strength;
+
+	float dy = (
+		(downLeft + 2 * bottom + downRight) -
+		(upLeft   + 2 * top    + upRight)
+	) * strength;
 
     float3 normal = normalize(make_float3(-dx, -dy, 1.0f));
 
