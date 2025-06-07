@@ -5,7 +5,7 @@
 #include <device_launch_parameters.h>
 #endif
 
-#include <image_utils.h>
+#include <image_utils.cuh>
 #include <linmath.h>
 #include <algorithm>
 

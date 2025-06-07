@@ -5,9 +5,9 @@
 #include <GLFW/glfw3.h>
 
 // Include image utilities
-#include <image_utils.h>
-
+#include <image_utils.cuh>
 #include <normal_map_generator.cuh>
+
 
 namespace core
 {

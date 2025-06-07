@@ -3,6 +3,11 @@
 #include <iostream>
 #include <string>
 
+#ifdef __CUDACC__
+#include <cuda_runtime.h>
+#include <device_launch_parameters.h>
+#endif
+
 #include <stb_image.h>
 #include <stb_image_write.h>
 #include <stb_image_resize.h>

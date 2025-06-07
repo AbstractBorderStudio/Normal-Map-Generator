@@ -220,15 +220,6 @@ void core::UserInterface::RenderSettingsWindow(AppData *data)
 			outputPanOffset = ImVec2(0.0f, 0.0f);
 		}
 		
-		ImGui::Dummy(ImVec2(0.0f, 10.0f));
-		
-		ImGui::Separator();
-		ImGui::Text("Input Image Size: %dx%d", data->inputImage.width, data->inputImage.height);
-		ImGui::Text("Output Image Size: %dx%d", data->outputImage.width, data->outputImage.height);
-		ImGui::Separator();
-		
-		ImGui::Dummy(ImVec2(0.0f, 10.0f));
-		
 		ImGui::Text("Normal Map Strength:");
 		ImGui::SliderFloat("Strength", &normalMapStrength, 0.0f, 1.0f, "%.8f");
 		if (normalMapStrength != currentMapStrength)
@@ -240,8 +231,20 @@ void core::UserInterface::RenderSettingsWindow(AppData *data)
 		ImGui::Dummy(ImVec2(0.0f, 10.0f));
 		ImGui::Separator();
 		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+				ImGui::Dummy(ImVec2(0.0f, 10.0f));
 		
-		ImGui::Text("Last Execution time for %s: %ld ms", currentHardwareType ? "CPU" : "GPU", timeNeeded);
+		ImGui::Separator();
+		ImGui::Text("Input Image Size: %dx%d", data->inputImage.width, data->inputImage.height);
+		ImGui::Text("Output Image Size: %dx%d", data->outputImage.width, data->outputImage.height);
+		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		ImGui::Text("Last Execution time for %s: ", currentHardwareType ? "CPU" : "GPU"); ImGui::SameLine();
+		ImGui::TextColored(
+			timeNeeded <= 50 ? 
+			ImVec4(0.0f, 1.0f, 0.0f, 1.0f) : timeNeeded > 50 && timeNeeded <= 100 ? 
+			ImVec4(1.0f, 1.0f, 0.0f, 1.0f) : 
+			ImVec4(1.0f, 0.0f, 0.0f, 1.0f), 
+			"%ld ms", timeNeeded);
+		ImGui::Separator();
 	}
 
     ImGui::End();

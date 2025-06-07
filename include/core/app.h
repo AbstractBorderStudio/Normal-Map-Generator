@@ -13,7 +13,7 @@
 // Include app data
 #include <app_data.h>
 // Include image utilities
-#include <image_utils.h>
+#include <image_utils.cuh>
 // Include Normal Map Generator
 #include <normal_map_generator.cuh>
 

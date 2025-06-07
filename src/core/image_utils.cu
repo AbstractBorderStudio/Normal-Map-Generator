@@ -1,7 +1,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
-#include <image_utils.h>
+#include <image_utils.cuh>
 
 void core::Image::Init(std::string imagePath, unsigned char* data, int width, int height, int channels)
 {
