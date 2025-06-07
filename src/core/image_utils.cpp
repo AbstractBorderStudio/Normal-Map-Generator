@@ -11,36 +11,6 @@ void core::Image::Init(std::string imagePath, unsigned char* data, int width, in
 	this->height = height;
 	this->channels = channels;
 	this->textureID = -1;
-	
-	
-	GLint maxTexSize = 0;
-	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexSize);
-
-	int newWidth = width;
-	int newHeight = height;
-	std::vector<unsigned char> resizedData;
-
-	if (width > maxTexSize || height > maxTexSize) {
-		float scale = std::min((float)maxTexSize / width, (float)maxTexSize / height);
-		newWidth = static_cast<int>(width * scale);
-		newHeight = static_cast<int>(height * scale);
-		resizedData.resize(newWidth * newHeight * channels);
-
-		stbir_resize_uint8(
-			data, width, height, 0,
-			resizedData.data(), newWidth, newHeight, 0,
-			channels
-		);
-		this->data = std::move(resizedData);
-		this->width = newWidth;
-		this->height = newHeight;
-	} else {
-		this->data.assign(data, data + (width * height * channels));
-		this->width = width;
-		this->height = height;
-	}
-	this->channels = channels;
-	this->textureID = -1;
 
 	// generate gltexture
 	glGenTextures(1, &textureID);
@@ -135,6 +105,29 @@ bool core::ImageUtils::TryLoadImage(const std::string& filePath, Image *image) {
 		return false;
 	}
 	
+	GLint maxTexSize = 0;
+	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexSize);
+
+	int newWidth = width;
+	int newHeight = height;
+	std::vector<unsigned char> resizedData;
+
+	if (width > maxTexSize || height > maxTexSize) {
+		float scale = std::min((float)maxTexSize / width, (float)maxTexSize / height);
+		newWidth = static_cast<int>(width * scale);
+		newHeight = static_cast<int>(height * scale);
+		resizedData.resize(newWidth * newHeight * channels);
+
+		stbir_resize_uint8(
+			data, width, height, 0,
+			resizedData.data(), newWidth, newHeight, 0,
+			channels
+		);
+		data = resizedData.data();
+		width = newWidth;
+		height = newHeight;
+	}
+
 	// initialize the image structure
 	image->Init(filePath, data, width, height, channels);
 	if (!image->IsValid()) {

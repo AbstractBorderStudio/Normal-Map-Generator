@@ -27,6 +27,12 @@ namespace core
 		CPU = 1
 	};
 
+	enum OptimizationType
+	{
+		BASE_ALGORITHM = 0,
+		TILINIG = 1,
+	};
+
 	class UserInterface
 	{
 		private:
@@ -44,6 +50,9 @@ namespace core
 			float normalMapStrength = 0.1f;
 			float currentMapStrength = normalMapStrength;
 			int hardwareType = 0; // Default to GPU
+			int optimizationType = 0; // Default to base
+			bool addPadding = false;
+			bool useCornerPixels = false;
 			int currentHardwareType = hardwareType;
 			long timeNeeded = 0;
 

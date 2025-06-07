@@ -9,6 +9,8 @@
 #include <linmath.h>
 #include <algorithm>
 
+#define BLOCK_SIZE 16
+
 namespace core {
     class NormalMapGenerator {
     private:
@@ -23,7 +25,7 @@ namespace core {
     public:
         NormalMapGenerator() = default;
         ~NormalMapGenerator() = default;
-        void GenerateNormalMapGPU(Image* inputImage, Image* outputImage, float strength = 1.0f);
+        void GenerateNormalMapGPU(Image* inputImage, Image* outputImage, float strength, int optimizationType, bool addPadding, bool useCornerPixels);
         void GenerateNormalMapCPU(Image* inputImage, Image* outputImage, float strength = 1.0f);
     };
 }

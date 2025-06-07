@@ -179,6 +179,14 @@ void core::UserInterface::RenderSettingsWindow(AppData *data)
 
 	if (data->inputImage.IsValid())
 	{
+		ImGui::Combo("Optimization Type", &optimizationType, "BASE ALGORITHM\0TILING\0");
+		if (optimizationType == TILINIG)
+		{
+			ImGui::Checkbox("Use corner pixels", &useCornerPixels);
+			ImGui::Checkbox("Add padding", &addPadding);
+		}
+		ImGui::Separator();
+		ImGui::Dummy(ImVec2(0.0f, 10.0f));
 		if (ImGui::Button("Save"))
 		{
 			if (data->outputImage.IsValid())
@@ -210,8 +218,12 @@ void core::UserInterface::RenderSettingsWindow(AppData *data)
 				data->outputImage.Clear();
 			}
 		}
-		
-		
+		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		if (ImGui::Button("Regenerate Normal Map"))
+		{
+			LunchNormalMapGeneration(data);
+		}
+		ImGui::Dummy(ImVec2(0.0f, 10.0f));
 		if (ImGui::Button("Reset Pan and Zoom"))
 		{
 			inputZoom = 1.0f;
@@ -219,13 +231,6 @@ void core::UserInterface::RenderSettingsWindow(AppData *data)
 			inputPanOffset = ImVec2(0.0f, 0.0f);
 			outputPanOffset = ImVec2(0.0f, 0.0f);
 		}
-		
-		ImGui::Dummy(ImVec2(0.0f, 10.0f));
-		
-		ImGui::Separator();
-		ImGui::Text("Input Image Size: %dx%d", data->inputImage.width, data->inputImage.height);
-		ImGui::Text("Output Image Size: %dx%d", data->outputImage.width, data->outputImage.height);
-		ImGui::Separator();
 		
 		ImGui::Dummy(ImVec2(0.0f, 10.0f));
 		
@@ -241,7 +246,18 @@ void core::UserInterface::RenderSettingsWindow(AppData *data)
 		ImGui::Separator();
 		ImGui::Dummy(ImVec2(0.0f, 10.0f));
 		
-		ImGui::Text("Last Execution time for %s: %ld ms", currentHardwareType ? "CPU" : "GPU", timeNeeded);
+		ImGui::Separator();
+		ImGui::Text("Input Image Size: %dx%d", data->inputImage.width, data->inputImage.height);
+		ImGui::Separator();
+
+		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		
+		ImGui::Text("Last Execution time for %s: ", currentHardwareType ? "CPU" : "GPU"); ImGui::SameLine();
+		ImGui::TextColored(
+			timeNeeded <= 30 ? ImVec4(0.0f, 1.0f, 0.0f, 1.0f) :
+			timeNeeded <= 80 ? ImVec4(1.0f, 1.0f, 0.0f, 1.0f) :
+			ImVec4(1.0f, 0.0f, 0.0f, 1.0f)
+			, "%ld ms", timeNeeded);
 	}
 
     ImGui::End();
@@ -268,7 +284,10 @@ void core::UserInterface::LunchNormalMapGeneration(AppData *data)
 		data->normalMapGenerator.GenerateNormalMapGPU(
 			&data->inputImage, 
 			&data->outputImage,
-			currentMapStrength
+			currentMapStrength,
+			optimizationType,
+			addPadding,
+			useCornerPixels
 		);
 		break;
 	case CPU:
