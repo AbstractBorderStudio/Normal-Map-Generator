@@ -1,11 +1,13 @@
 # Normal Map Generator
 
-## Description
-// TODO: add description
+Author: Daniel Bologna
+This project was made for the GPU Programming Course @ Politecnico di Torino.
 
 ## Build it yourself
-// TODO optional add build description
- 
+- Open the project using Visual Studio
+- Open the CmakeLists.txt file and hit CRTL+S to save and start CMAKE configuration.
+- After the configuration finishes open the main.cpp file and hit F5 to start building.
+
 ## Third party
 
 This project is possible thanks to the following libraries:
