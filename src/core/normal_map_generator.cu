@@ -1,7 +1,7 @@
 #include <normal_map_generator.cuh>
 
 /// @brief 
-__shared__ float tile[BLOCK_SIZE + 2][BLOCK_SIZE + 2];
+__shared__ float tile[BLOCK_SIZE + 1][BLOCK_SIZE + 1];
 
 #pragma region GPU Normal Map Generation
 
@@ -65,6 +65,31 @@ void GenerateNormalMapKernel(unsigned char* inputData, unsigned char* outputData
 		tile[ly + 1][lx] = 0.299f * inputData[idx] + 0.587f * inputData[idx+1] + 0.114f * inputData[idx+2];
 	}
 
+	// Up Left
+	if (threadIdx.x == 0 && threadIdx.y == 0 && gx > 0 && gy > 0) {
+		int idx = ((gy - 1) * width + (gx - 1)) * channels;
+		tile[ly - 1][lx - 1] = 0.299f * inputData[idx] + 0.587f * inputData[idx+1] + 0.114f * inputData[idx+2];
+	}
+
+	// Up Right
+	if (threadIdx.x == blockDim.x - 1 && threadIdx.y == 0 && gx < width - 1 && gy > 0) {
+		int idx = ((gy - 1) * width + (gx + 1)) * channels;
+		tile[ly - 1][lx + 1] = 0.299f * inputData[idx] + 0.587f * inputData[idx+1] + 0.114f * inputData[idx+2];
+	}
+
+	// Down Left
+	if (threadIdx.x == 0 && threadIdx.y == blockDim.y - 1 && gx > 0 && gy < height - 1) {
+		int idx = ((gy + 1) * width + (gx - 1)) * channels;
+		tile[ly + 1][lx - 1] = 0.299f * inputData[idx] + 0.587f * inputData[idx+1] + 0.114f * inputData[idx+2];
+	}
+
+	// Down Right
+	if (threadIdx.x == blockDim.x - 1 && threadIdx.y == blockDim.y - 1 && gx < width - 1 && gy < height - 1) {
+		int idx = ((gy + 1) * width + (gx + 1)) * channels;
+		tile[ly + 1][lx + 1] = 0.299f * inputData[idx] + 0.587f * inputData[idx+1] + 0.114f * inputData[idx+2];
+	}
+	
+
 	// wait for all threads to finish loading data into shared memory
 	__syncthreads();
 
@@ -73,9 +98,21 @@ void GenerateNormalMapKernel(unsigned char* inputData, unsigned char* outputData
 	float right  = tile[ly][lx + 1];
 	float top    = tile[ly - 1][lx];
 	float bottom = tile[ly + 1][lx];
+	float upLeft = tile[ly - 1][lx - 1];
+	float upRight = tile[ly - 1][lx + 1];
+	float downLeft = tile[ly + 1][lx - 1];
+	float downRight = tile[ly + 1][lx + 1];
 
-	float dx = (right - left) * strength;
-	float dy = (bottom - top) * strength;
+	// compute sobel gradients
+	float dx = (
+		(upRight + 2 * right + downRight) -
+		(upLeft  + 2 * left  + downLeft)
+	) * strength;
+
+	float dy = (
+		(downLeft + 2 * bottom + downRight) -
+		(upLeft   + 2 * top    + upRight)
+	) * strength;
 
 	float3 normal = normalize(make_float3(-dx, -dy, 1.0f));
     outputData[gidx + 0] = static_cast<unsigned char>((normal.x * 0.5f + 0.5f) * 255);
