@@ -128,7 +128,7 @@ void core::NormalMapGenerator::GenerateNormalMapGPU(Image* inputImage, Image* ou
 	unsigned char* result = (unsigned char*)malloc(inputImage->width * inputImage->height * inputImage->channels * sizeof(unsigned char));
 	
 	// Compute grid and block sizes
-	dim3 blockSize(16, 16);
+	dim3 blockSize(BLOCK_SIZE);
 	dim3 gridSize((inputImage->width + blockSize.x - 1) / blockSize.x, 
 					(inputImage->height + blockSize.y - 1) / blockSize.y);
 
