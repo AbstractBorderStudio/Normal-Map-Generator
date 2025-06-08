@@ -1,7 +1,7 @@
 # Normal Map Generator
 
-Author: Daniel Bologna
-This project was made for the GPU Programming Course @ Politecnico di Torino.
+- This project was made for the GPU Programming Course @ Politecnico di Torino.
+- Author: Daniel Bologna
 
 ## Build it yourself
 - Open the project using Visual Studio
