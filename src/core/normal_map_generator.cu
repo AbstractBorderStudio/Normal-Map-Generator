@@ -401,7 +401,8 @@ void core::NormalMapGenerator::GenerateNormalMapGPU(Image* inputImage, Image* ou
 	{
 		// Base kernel without padding
 		GenerateNormalMapKernelBase<<<gridSize, blockSize>>>(inputData, outputData, inputImage->width, inputImage->height, inputImage->channels, strength);
-	} else
+	} 
+	else
 	{
 		// Tiling kernel with padding
 		if (addPadding)
@@ -423,6 +424,7 @@ void core::NormalMapGenerator::GenerateNormalMapGPU(Image* inputImage, Image* ou
 	}
 
 	outputImage->Init("", result, inputImage->width, inputImage->height, inputImage->channels);
+	free(result);
 	ClearDeviceMemory();
 }
 #pragma endregion

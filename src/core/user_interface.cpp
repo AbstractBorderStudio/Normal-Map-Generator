@@ -235,7 +235,7 @@ void core::UserInterface::RenderSettingsWindow(AppData *data)
 		ImGui::Dummy(ImVec2(0.0f, 10.0f));
 		
 		ImGui::Text("Normal Map Strength:");
-		ImGui::SliderFloat("Strength", &normalMapStrength, 0.0f, 1.0f, "%.8f");
+		ImGui::SliderFloat("Strength", &normalMapStrength, 0.0f, 5.0f, "%.8f");
 		if (normalMapStrength != currentMapStrength)
 		{
 			currentMapStrength = normalMapStrength;
@@ -243,9 +243,6 @@ void core::UserInterface::RenderSettingsWindow(AppData *data)
 		}
 
 		ImGui::Dummy(ImVec2(0.0f, 10.0f));
-		ImGui::Separator();
-		ImGui::Dummy(ImVec2(0.0f, 10.0f));
-		
 		ImGui::Separator();
 		ImGui::Text("Input Image Size: %dx%d", data->inputImage.width, data->inputImage.height);
 		ImGui::Separator();
@@ -284,7 +281,7 @@ void core::UserInterface::LunchNormalMapGeneration(AppData *data)
 		data->normalMapGenerator.GenerateNormalMapGPU(
 			&data->inputImage, 
 			&data->outputImage,
-			currentMapStrength,
+			currentMapStrength/100.0f,
 			optimizationType,
 			addPadding,
 			useCornerPixels
@@ -294,7 +291,7 @@ void core::UserInterface::LunchNormalMapGeneration(AppData *data)
 		data->normalMapGenerator.GenerateNormalMapCPU(
 			&data->inputImage, 
 			&data->outputImage,
-			currentMapStrength
+			currentMapStrength/100.0f
 		);
 	default:
 		break;
